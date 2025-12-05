@@ -68,9 +68,21 @@ jobs:
           dist/miku-theme-chrome.zip
           dist/miku-theme-firefox.zip
           dist/miku-theme.crx
-    
+
+    - name: Generate timestamp tag
+      id: timestamp
+      run: |
+        TAG=$(date -u +"%Y.%m.%d.%H.%M")
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+    - name: Create Git tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.timestamp.outputs.tag }}
+        git push origin ${{ steps.timestamp.outputs.tag }}
+
     - name: Create Auto Release
-      id: release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.timestamp.outputs.tag }}
@@ -82,9 +94,3 @@ jobs:
           dist/miku-theme.crx
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Generate timestamp tag
-      id: timestamp
-      run: |
-        TAG=$(date -u +"%Y.%m.%d.%H.%M")
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
