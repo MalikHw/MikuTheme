@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Miku Theme</title>
+  <style>
+    @import "https://www.nerdfonts.com/assets/css/webfont.css";
+  </style>
+  <link rel="stylesheet" href="settings-style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><span class="nf nf-md-palette"></span> Miku Theme Settings</h1>
+      <p class="subtitle">Customize your new tab experience</p>
+    </header>
+
+    <div class="settings-grid">
+      <!-- Blur Effects Section -->
+      <section class="settings-section">
+        <h2><span class="nf nf-md-blur"></span> Visual Effects</h2>
+        <div class="setting-item">
+          <div class="setting-info">
+            <label for="blurToggle">Enable Blur Effects</label>
+            <p class="setting-description">Apply blur to all UI elements (search bar, shortcuts, etc.)</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="blurToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div class="setting-info">
+            <label for="wallpaperBlurToggle">Blur Wallpaper</label>
+            <p class="setting-description">Apply blur effect to the background image (requires blur effects enabled)</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="wallpaperBlurToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Background Section -->
+      <section class="settings-section">
+        <h2><span class="nf nf-md-image"></span> Background Image</h2>
+        <div class="setting-item column">
+          <div class="setting-info">
+            <label>Custom Background</label>
+            <p class="setting-description">Upload your own background image or use random from GitHub</p>
+          </div>
+          <div class="bg-controls">
+            <input type="file" id="bgUpload" accept="image/*" style="display: none;">
+            <button class="btn secondary" id="uploadBtn">
+              <span class="nf nf-md-upload"></span> Upload Image
+            </button>
+            <button class="btn danger" id="resetBgBtn">
+              <span class="nf nf-md-refresh"></span> Reset to Random
+            </button>
+          </div>
+          <div id="bgPreview" class="bg-preview"></div>
+        </div>
+      </section>
+
+      <!-- Info Section -->
+      <section class="settings-section info-section">
+        <h2><span class="nf nf-md-information"></span> About</h2>
+        <div class="info-grid">
+          <a href="https://youtube.com/@MalikHw47" target="_blank" class="info-card">
+            <span class="nf nf-md-youtube"></span>
+            <div>
+              <strong>YouTube</strong>
+              <p>@MalikHw47</p>
+            </div>
+          </a>
+          <a href="https://twitch.tv/MalikHw47" target="_blank" class="info-card">
+            <span class="nf nf-md-twitch"></span>
+            <div>
+              <strong>Twitch</strong>
+              <p>MalikHw47</p>
+            </div>
+          </a>
+          <a href="https://github.com/MalikHw" target="_blank" class="info-card">
+            <span class="nf nf-md-github"></span>
+            <div>
+              <strong>GitHub</strong>
+              <p>MalikHw</p>
+            </div>
+          </a>
+          <a href="https://ko-fi.com/MalikHw47" target="_blank" class="info-card kofi">
+            <span class="nf nf-fa-dollar"></span>
+            <div>
+              <strong>Support Me</strong>
+              <p>Ko-fi</p>
+            </div>
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <p>Made with <span class="nf nf-md-heart" style="color: #ff4757;"></span> by MalikHw47</p>
+      <p style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">
+        Help us reach Chrome Web Store! 
+        <a href="https://ko-fi.com/MalikHw47" target="_blank" style="color: white; text-decoration: underline;">Donate on Ko-fi</a>
+      </p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="settings-script.js"></script>
+</body>
+</html>

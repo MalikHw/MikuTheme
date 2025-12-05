@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Tab</title>
+  <style>
+    @import "https://www.nerdfonts.com/assets/css/webfont.css";
+  </style>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background-layer"></div>
+  
+  <div class="content-wrapper">
+    <!-- Search Section -->
+    <div class="search-container animate-slide-down">
+      <div class="search-engine-selector">
+        <button class="engine-btn active" data-engine="google" title="Google">
+          <span class="nf nf-md-google"></span>
+        </button>
+        <button class="engine-btn" data-engine="bing" title="Bing">
+          <span class="nf nf-md-microsoft_bing"></span>
+        </button>
+        <button class="engine-btn" data-engine="duckduckgo" title="DuckDuckGo">
+          <span class="nf nf-md-duck"></span>
+        </button>
+        <button class="engine-btn" data-engine="yandex" title="Yandex">
+          <span class="nf nf-md-search_web"></span>
+        </button>
+        <button class="engine-btn" data-engine="brave" title="Brave Search">
+          <span class="nf nf-md-shield"></span>
+        </button>
+      </div>
+      
+      <div class="search-bar-wrapper">
+        <span class="search-icon nf nf-md-magnify"></span>
+        <input type="text" class="search-bar" placeholder="Search the web..." />
+        <button class="search-submit nf nf-md-arrow_right"></button>
+      </div>
+    </div>
+
+    <!-- Shortcuts Section -->
+    <div class="shortcuts-container animate-fade-in">
+      <div class="shortcuts-grid" id="shortcutsGrid"></div>
+    </div>
+
+    <!-- Settings Button -->
+    <button class="settings-btn animate-fade-in" id="settingsBtn">
+      <span class="nf nf-md-cog"></span>
+    </button>
+
+    <!-- Ko-fi Banner -->
+    <div class="kofi-banner animate-fade-in">
+      <span class="nf nf-md-heart" style="color: #ff4757;"></span>
+      <span>Help us reach Chrome Web Store!</span>
+      <a href="https://ko-fi.com/MalikHw47" target="_blank" class="kofi-btn">
+        <span class="nf nf-fa-dollar"></span> Donate on Ko-fi
+      </a>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

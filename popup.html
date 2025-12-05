@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Miku Theme</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/nerd-fonts-symbols@1.0.0/index.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 300px;
+      padding: 1.5rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%);
+    }
+
+    .popup-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+
+    .popup-header h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .popup-header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .popup-button {
+      width: 100%;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      background: white;
+      color: #202124;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .popup-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      background: #f0f0f0;
+    }
+
+    .popup-button span {
+      font-size: 1.2rem;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-header">
+    <h1><span class="nf nf-md-palette"></span> Miku Theme</h1>
+    <p>by MalikHw47</p>
+  </div>
+
+  <button class="popup-button" id="openSettings">
+    <span class="nf nf-md-cog"></span>
+    Open Settings
+  </button>
+
+  <button class="popup-button" id="openNewTab">
+    <span class="nf nf-md-tab"></span>
+    New Tab Preview
+  </button>
+
+  <div class="footer">
+    <p>Made with <span class="nf nf-md-heart" style="color: #ff4757;"></span></p>
+  </div>
+
+  <script>
+    document.getElementById('openSettings').addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
+    });
+
+    document.getElementById('openNewTab').addEventListener('click', () => {
+      chrome.tabs.create({ url: 'chrome://newtab/' });
+    });
+  </script>
+</body>
+</html>
