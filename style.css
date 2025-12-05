@@ -25,7 +25,7 @@ body {
   transition: filter 0.3s ease;
 }
 
-/* Blur only applied to background when enabled */
+/* Blur only applied to background when wallpaperBlur is enabled */
 .background-layer.blur {
   filter: blur(8px);
 }
@@ -34,7 +34,8 @@ body {
 .search-engine-selector.blur,
 .search-bar-wrapper.blur,
 .shortcut-card.blur,
-.settings-btn.blur {
+.settings-btn.blur,
+.kofi-banner.blur {
   backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.7);
 }
@@ -106,6 +107,7 @@ body {
   gap: 1rem;
   width: 100%;
   max-width: 600px;
+  position: relative;
 }
 
 .search-engine-selector {
@@ -190,6 +192,60 @@ body {
 .search-submit:hover {
   background: rgba(104, 195, 255, 1);
   transform: scale(1.1) rotate(10deg);
+}
+
+/* Search Suggestions */
+.suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  max-height: 400px;
+  overflow-y: auto;
+  display: none;
+  z-index: 1000;
+}
+
+.suggestions-dropdown.active {
+  display: block;
+  animation: fadeIn 0.2s ease;
+}
+
+.suggestions-dropdown.blur {
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.suggestion-item {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background 0.2s ease;
+  color: #202124;
+}
+
+.suggestion-item:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.suggestion-item:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background: rgba(104, 195, 255, 0.2);
+}
+
+.suggestion-icon {
+  font-size: 1.2rem;
+  color: #5f6368;
 }
 
 /* Shortcuts */
