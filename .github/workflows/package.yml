@@ -34,7 +34,6 @@ jobs:
     - name: Create Chrome package
       run: |
         mkdir -p dist/chrome
-        # Copy all files except images folder
         rsync -av --exclude='images' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
         cd dist/chrome
         zip -r ../miku-theme-chrome.zip .
@@ -42,18 +41,14 @@ jobs:
     - name: Create Firefox package
       run: |
         mkdir -p dist/firefox
-        # Copy all files except images folder
         rsync -av --exclude='images' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
-        # Copy Firefox-specific manifest
         cp firefox/manifest.json dist/firefox/manifest.json
         cd dist/firefox
         zip -r ../miku-theme-firefox.zip .
     
     - name: Generate Chrome CRX
       run: |
-        # Install crx3 tool
         npm install -g crx3
-        # Create CRX file
         crx3 dist/chrome -p key.pem -o dist/miku-theme.crx
         echo "CRX file created successfully"
     
@@ -74,13 +69,22 @@ jobs:
           dist/miku-theme-firefox.zip
           dist/miku-theme.crx
     
-    - name: Create Release (on tag)
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Create Auto Release
+      id: release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.timestamp.outputs.tag }}
+        name: Auto Build Update
+        body: "...idk? Read the main README.md?💀"
         files: |
           dist/miku-theme-chrome.zip
           dist/miku-theme-firefox.zip
           dist/miku-theme.crx
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate timestamp tag
+      id: timestamp
+      run: |
+        TAG=$(date -u +"%Y.%m.%d.%H.%M")
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
