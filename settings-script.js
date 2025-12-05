@@ -1,4 +1,4 @@
-let settings = { blurEnabled: false, customBg: null };
+let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null };
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,6 +30,13 @@ function setupEventListeners() {
     saveSettings();
   });
 
+  // Wallpaper Blur Toggle
+  const wallpaperBlurToggle = document.getElementById('wallpaperBlurToggle');
+  wallpaperBlurToggle.addEventListener('change', () => {
+    settings.wallpaperBlur = wallpaperBlurToggle.checked;
+    saveSettings();
+  });
+
   // Upload Button
   const uploadBtn = document.getElementById('uploadBtn');
   const bgUpload = document.getElementById('bgUpload');
@@ -47,8 +54,9 @@ function setupEventListeners() {
 
 // Update UI
 function updateUI() {
-  // Update blur toggle
+  // Update blur toggles
   document.getElementById('blurToggle').checked = settings.blurEnabled;
+  document.getElementById('wallpaperBlurToggle').checked = settings.wallpaperBlur;
 
   // Update background preview
   const bgPreview = document.getElementById('bgPreview');
@@ -107,4 +115,4 @@ function showToast(message, isError = false) {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
-}
+}}
