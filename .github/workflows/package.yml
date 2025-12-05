@@ -1,0 +1,86 @@
+name: Package Extension
+
+on:
+  push:
+    paths:
+      - 'manifest.json'
+      - 'firefox/manifest.json'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Generate or restore CRX private key
+      run: |
+        if [ ! -f "key.pem" ]; then
+          echo "No key.pem found. Generating new key..."
+          openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out key.pem
+          echo "New key generated!"
+          echo "KEY_GENERATED=true" >> $GITHUB_ENV
+        else
+          echo "Using existing key.pem from repository"
+          echo "KEY_GENERATED=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Create Chrome package
+      run: |
+        mkdir -p dist/chrome
+        # Copy all files except images folder
+        rsync -av --exclude='images' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
+        cd dist/chrome
+        zip -r ../miku-theme-chrome.zip .
+    
+    - name: Create Firefox package
+      run: |
+        mkdir -p dist/firefox
+        # Copy all files except images folder
+        rsync -av --exclude='images' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
+        # Copy Firefox-specific manifest
+        cp firefox/manifest.json dist/firefox/manifest.json
+        cd dist/firefox
+        zip -r ../miku-theme-firefox.zip .
+    
+    - name: Generate Chrome CRX
+      run: |
+        # Install crx3 tool
+        npm install -g crx3
+        # Create CRX file
+        crx3 dist/chrome -p key.pem -o dist/miku-theme.crx
+        echo "CRX file created successfully"
+    
+    - name: Upload key.pem if newly generated
+      if: env.KEY_GENERATED == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: crx-private-key
+        path: key.pem
+        retention-days: 90
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: extension-packages
+        path: |
+          dist/miku-theme-chrome.zip
+          dist/miku-theme-firefox.zip
+          dist/miku-theme.crx
+    
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/miku-theme-chrome.zip
+          dist/miku-theme-firefox.zip
+          dist/miku-theme.crx
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
