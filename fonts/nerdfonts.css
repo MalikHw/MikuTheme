@@ -22,8 +22,8 @@
 
 /* Material Design Icons (nf-md-*) */
 .nf-md-google:before { content: "\f02ad"; }
-.nf-md-microsoft_bing:before { content: "\udb80\udca4"; }
-.nf-md-duck:before { content: "\udb80\udde5"; }
+.nf-md-microsoft_bing:before { content: "󰂤"; }
+.nf-md-duck:before { content: "󰇥"; }
 .nf-md-shield:before { content: "\f0498"; }
 .nf-md-magnify:before { content: "\f0349"; }
 .nf-md-arrow_right:before { content: "\f0054"; }
@@ -46,4 +46,4 @@
 
 /* Font Awesome Icons (nf-fa-*) */
 .nf-fa-dollar:before { content: "\f155"; }
-.nf-fa-yandex_international:before { content: "\ued40"; }
+.nf-fa-yandex_international:before { content: ""; }
