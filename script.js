@@ -10,6 +10,9 @@ const searchEngines = {
 let currentEngine = 'google';
 let shortcuts = [];
 let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null };
+let suggestionsCache = new Map();
+let currentSuggestions = [];
+let selectedSuggestionIndex = -1;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   renderShortcuts();
   applyBlurSettings();
+  createSuggestionsDropdown();
 });
 
 // Load Settings
@@ -54,35 +58,29 @@ async function loadBackground() {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
   } else {
     try {
-      // Try to fetch a random image from the GitHub repo
       const randomId = Math.floor(Math.random() * 100) + 1;
       const imageUrl = `https://raw.githubusercontent.com/MalikHw/MikuTheme/main/images/${randomId}.png`;
       
-      // Test if image exists
       const response = await fetch(imageUrl, { method: 'HEAD' });
       if (response.ok) {
         bgLayer.style.backgroundImage = `url(${imageUrl})`;
       } else {
-        // Fallback gradient
         bgLayer.style.background = 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
       }
     } catch (error) {
-      // Fallback gradient
       bgLayer.style.background = 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
     }
   }
 }
 
-// Apply Blur Settings - Now applies to all UI elements
+// Apply Blur Settings - Now includes all UI elements
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
-  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner');
+  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .suggestions-dropdown');
   
   if (settings.blurEnabled) {
-    // Apply blur to UI elements
     blurElements.forEach(el => el.classList.add('blur'));
     
-    // Apply blur to background only if wallpaperBlur is enabled
     if (settings.wallpaperBlur) {
       bgLayer.classList.add('blur');
     } else {
@@ -92,6 +90,103 @@ function applyBlurSettings() {
     bgLayer.classList.remove('blur');
     blurElements.forEach(el => el.classList.remove('blur'));
   }
+}
+
+// Create Suggestions Dropdown
+function createSuggestionsDropdown() {
+  const searchContainer = document.querySelector('.search-container');
+  const dropdown = document.createElement('div');
+  dropdown.className = 'suggestions-dropdown';
+  dropdown.id = 'suggestionsDropdown';
+  searchContainer.appendChild(dropdown);
+}
+
+// Fetch Search Suggestions from Brave API
+async function fetchSuggestions(query) {
+  if (!query.trim()) {
+    hideSuggestions();
+    return;
+  }
+
+  if (suggestionsCache.has(query)) {
+    displaySuggestions(suggestionsCache.get(query));
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://search.brave.com/api/suggest?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    
+    if (data && data[1] && Array.isArray(data[1])) {
+      const suggestions = data[1].slice(0, 8);
+      suggestionsCache.set(query, suggestions);
+      displaySuggestions(suggestions);
+    }
+  } catch (error) {
+    console.error('Failed to fetch suggestions:', error);
+  }
+}
+
+// Display Suggestions
+function displaySuggestions(suggestions) {
+  const dropdown = document.getElementById('suggestionsDropdown');
+  currentSuggestions = suggestions;
+  selectedSuggestionIndex = -1;
+  
+  if (suggestions.length === 0) {
+    hideSuggestions();
+    return;
+  }
+
+  dropdown.innerHTML = suggestions.map((suggestion, index) => `
+    <div class="suggestion-item" data-index="${index}">
+      <span class="suggestion-icon nf nf-md-magnify"></span>
+      <span>${escapeHtml(suggestion)}</span>
+    </div>
+  `).join('');
+
+  dropdown.classList.add('active');
+  applyBlurSettings();
+
+  dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const query = currentSuggestions[item.dataset.index];
+      document.querySelector('.search-bar').value = query;
+      performSearch();
+    });
+  });
+}
+
+// Hide Suggestions
+function hideSuggestions() {
+  const dropdown = document.getElementById('suggestionsDropdown');
+  dropdown.classList.remove('active');
+  currentSuggestions = [];
+  selectedSuggestionIndex = -1;
+}
+
+// Navigate Suggestions with Keyboard
+function navigateSuggestions(direction) {
+  if (currentSuggestions.length === 0) return;
+
+  const items = document.querySelectorAll('.suggestion-item');
+  
+  if (items.length === 0) return;
+
+  if (selectedSuggestionIndex >= 0) {
+    items[selectedSuggestionIndex].classList.remove('selected');
+  }
+
+  if (direction === 'down') {
+    selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+  } else if (direction === 'up') {
+    selectedSuggestionIndex = selectedSuggestionIndex <= 0 
+      ? currentSuggestions.length - 1 
+      : selectedSuggestionIndex - 1;
+  }
+
+  items[selectedSuggestionIndex].classList.add('selected');
+  document.querySelector('.search-bar').value = currentSuggestions[selectedSuggestionIndex];
 }
 
 // Setup Event Listeners
@@ -109,13 +204,42 @@ function setupEventListeners() {
   const searchBar = document.querySelector('.search-bar');
   const searchSubmit = document.querySelector('.search-submit');
   
-  searchBar.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      performSearch();
+  let suggestionTimeout;
+  
+  searchBar.addEventListener('input', (e) => {
+    clearTimeout(suggestionTimeout);
+    suggestionTimeout = setTimeout(() => {
+      fetchSuggestions(e.target.value);
+    }, 300);
+  });
+
+  searchBar.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      navigateSuggestions('down');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      navigateSuggestions('up');
+    } else if (e.key === 'Escape') {
+      hideSuggestions();
     }
   });
   
-  searchSubmit.addEventListener('click', performSearch);
+  searchBar.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      performSearch();
+      hideSuggestions();
+    }
+  });
+
+  searchBar.addEventListener('blur', () => {
+    setTimeout(hideSuggestions, 200);
+  });
+  
+  searchSubmit.addEventListener('click', () => {
+    performSearch();
+    hideSuggestions();
+  });
 
   // Settings Button
   document.getElementById('settingsBtn').addEventListener('click', () => {
@@ -143,22 +267,18 @@ function renderShortcuts() {
   const grid = document.getElementById('shortcutsGrid');
   grid.innerHTML = '';
 
-  // Calculate slots (2 rows × 7 columns = 14 slots)
   const maxSlots = 14;
   
-  // Render existing shortcuts
   shortcuts.forEach((shortcut, index) => {
     const card = createShortcutCard(shortcut, index);
     grid.appendChild(card);
   });
 
-  // Render empty slots with add buttons
   for (let i = shortcuts.length; i < maxSlots; i++) {
     const addCard = createAddButton();
     grid.appendChild(addCard);
   }
   
-  // Reapply blur settings to newly created cards
   applyBlurSettings();
 }
 
@@ -173,7 +293,6 @@ function createShortcutCard(shortcut, index) {
     <button class="delete-shortcut nf nf-md-close"></button>
   `;
 
-  // Delete button
   const deleteBtn = card.querySelector('.delete-shortcut');
   deleteBtn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -220,7 +339,6 @@ function showAddShortcutModal() {
 
   document.body.appendChild(modal);
 
-  // Modal events
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.remove();
@@ -245,7 +363,6 @@ function showAddShortcutModal() {
     }
   });
 
-  // Allow Enter key to submit
   const inputs = modal.querySelectorAll('input');
   inputs.forEach(input => {
     input.addEventListener('keypress', (e) => {
@@ -255,7 +372,6 @@ function showAddShortcutModal() {
     });
   });
 
-  // Focus on title input
   setTimeout(() => {
     document.getElementById('shortcutTitle').focus();
   }, 100);
