@@ -58,7 +58,7 @@ async function loadBackground() {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
   } else {
     try {
-      const randomId = Math.floor(Math.random() * 100) + 1;
+      const randomId = Math.floor(Math.random() * 7 + 1;
       const imageUrl = `https://raw.githubusercontent.com/MalikHw/MikuTheme/main/images/${randomId}.png`;
       
       const response = await fetch(imageUrl, { method: 'HEAD' });
@@ -393,3 +393,4 @@ function isValidUrl(string) {
     return false;
   }
 }
+
