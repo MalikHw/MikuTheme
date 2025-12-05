@@ -22,15 +22,15 @@
 
 /* Material Design Icons (nf-md-*) */
 .nf-md-google:before { content: "\f02ad"; }
-.nf-md-microsoft_bing:before { content: "\f0323"; }
-.nf-md-duck:before { content: "\f01ae"; }
-.nf-md-shield:before { content: "\f0498"; }
+.nf-md-microsoft_bing:before { content: "\udb80\udca4"; }
+.nf-md-duck:before { content: "\udb80\udde5"; }
+.nf-md-shield:before { content: "\udb81\udc98"; }
 .nf-md-magnify:before { content: "\f0349"; }
 .nf-md-arrow_right:before { content: "\f0054"; }
 .nf-md-link_variant:before { content: "\f0339"; }
 .nf-md-close:before { content: "\f0156"; }
 .nf-md-plus:before { content: "\f0415"; }
-.nf-md-cog:before { content: "\f0493"; }
+.nf-md-cog:before { content: "\uf013"; }
 .nf-md-heart:before { content: "\f02d1"; }
 .nf-md-palette:before { content: "\f03d8"; }
 .nf-md-blur:before { content: "\f00bc"; }
@@ -41,9 +41,9 @@
 .nf-md-github:before { content: "\f02a4"; }
 .nf-md-upload:before { content: "\f0552"; }
 .nf-md-refresh:before { content: "\f0450"; }
-.nf-md-tab:before { content: "\f04ff"; }
+.nf-md-tab:before { content: "\udb81\udce9"; }
 .nf-md-search_web:before { content: "\f04b2"; }
 
 /* Font Awesome Icons (nf-fa-*) */
 .nf-fa-dollar:before { content: "\f155"; }
-.nf-fa-yandex_international:before { content: "\f414"; }
+.nf-fa-yandex_international:before { content: "\ued40"; }
