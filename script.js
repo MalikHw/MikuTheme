@@ -110,13 +110,38 @@ async function loadRandomImage() {
       return;
     }
     
-    // Fetch and cache the new image as base64 in the background
-    const imgResponse = await fetch(imageUrl);
-    const blob = await imgResponse.blob();
-    const reader = new FileReader();
+    // Show loading indicator
+    showLoadingIndicator();
     
-    reader.onloadend = async () => {
-      const base64data = reader.result;
+    // Fetch and cache the new image as base64 with progress tracking
+    const imgResponse = await fetch(imageUrl);
+    const contentLength = imgResponse.headers.get('content-length');
+    const total = parseInt(contentLength, 10);
+    let loaded = 0;
+    
+    const reader = imgResponse.body.getReader();
+    const chunks = [];
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      chunks.push(value);
+      loaded += value.length;
+      
+      if (total) {
+        const percentage = Math.round((loaded / total) * 100);
+        updateLoadingProgress(percentage);
+      }
+    }
+    
+    // Combine chunks into blob
+    const blob = new Blob(chunks);
+    const fileReader = new FileReader();
+    
+    fileReader.onloadend = async () => {
+      const base64data = fileReader.result;
       // Cache the image along with its URL
       await chrome.storage.local.set({ 
         [cacheKey]: base64data,
@@ -124,12 +149,53 @@ async function loadRandomImage() {
       });
       bgLayer.style.backgroundImage = `url(${base64data})`;
       console.log('Image cached successfully');
+      hideLoadingIndicator();
     };
     
-    reader.readAsDataURL(blob);
+    fileReader.readAsDataURL(blob);
     
   } catch (error) {
     console.error('Error loading random image:', error);
+    hideLoadingIndicator();
+  }
+}
+
+// Show loading indicator
+function showLoadingIndicator() {
+  const indicator = document.createElement('div');
+  indicator.id = 'wallpaperLoader';
+  indicator.className = 'wallpaper-loader';
+  indicator.innerHTML = `
+    <span class="nf nf-md-download"></span>
+    <span class="loader-text">loading wallpapah <span class="loader-percentage">0%</span></span>
+  `;
+  document.body.appendChild(indicator);
+  
+  // Trigger animation
+  setTimeout(() => {
+    indicator.classList.add('active');
+  }, 10);
+}
+
+// Update loading progress
+function updateLoadingProgress(percentage) {
+  const loader = document.getElementById('wallpaperLoader');
+  if (loader) {
+    const percentageEl = loader.querySelector('.loader-percentage');
+    if (percentageEl) {
+      percentageEl.textContent = `${percentage}%`;
+    }
+  }
+}
+
+// Hide loading indicator
+function hideLoadingIndicator() {
+  const loader = document.getElementById('wallpaperLoader');
+  if (loader) {
+    loader.classList.remove('active');
+    setTimeout(() => {
+      loader.remove();
+    }, 300);
   }
 }
 
