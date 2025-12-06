@@ -45,6 +45,7 @@ jobs:
         mkdir -p dist/firefox
         rsync -av --exclude='images' --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
         cp firefox/manifest.json dist/firefox/manifest.json
+        cp firefox/newtab.html dist/firefox/newtab.html
         cd dist/firefox
         zip -r ../miku-theme-firefox.zip .
     
