@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Miku Theme - MalikHw",
   "description": "a Hatsune Miku themed New Tab page for chromium browsers!",
-  "version": "1.3",
+  "version": "1.4",
   "author": "MalikHw47",
   "icons": {
     "16": "icon.png",
@@ -24,4 +24,5 @@
     "default_icon": "icon.png"
   },
   "options_page": "settings.html"
+
 }
