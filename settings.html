@@ -38,6 +38,17 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <!-- Teto Mode Toggle (hidden by default) -->
+        <div class="setting-item" id="tetoModeContainer" style="display: none;">
+          <div class="setting-info">
+            <label for="tetoModeToggle">🔴 Teto Mode</label>
+            <p class="setting-description">Switch to Kasane Teto theme with red color scheme</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tetoModeToggle">
+            <span class="toggle-slider teto"></span>
+          </label>
+        </div>
       </section>
 
       <!-- Background Section -->
@@ -94,6 +105,11 @@
             </div>
           </a>
         </div>
+        <!-- Version Display -->
+        <div class="version-display" id="versionDisplay">
+          <span class="nf nf-md-information_outline"></span>
+          <span>Version: <span id="versionNumber">Loading...</span></span>
+        </div>
       </section>
     </div>
 
@@ -110,4 +126,4 @@
 
   <script src="settings-script.js"></script>
 </body>
-</html></html>
+</html>

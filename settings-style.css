@@ -9,6 +9,50 @@ body {
   background: linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%);
   min-height: 100vh;
   padding: 2rem;
+  transition: background 0.5s ease;
+}
+
+/* Teto Mode Color Scheme */
+body.teto-mode {
+  background: linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%);
+}
+
+body.teto-mode .settings-section {
+  border: 2px solid rgba(255, 107, 107, 0.3);
+}
+
+body.teto-mode .info-section {
+  background: linear-gradient(135deg, rgba(255, 153, 153, 0.2) 0%, rgba(255, 107, 107, 0.2) 100%);
+  border: 2px solid rgba(255, 107, 107, 0.3);
+}
+
+body.teto-mode .btn.secondary {
+  background: #ff6b6b;
+}
+
+body.teto-mode .btn.secondary:hover {
+  background: #ff5252;
+}
+
+body.teto-mode .toggle input:checked + .toggle-slider {
+  background-color: #ff6b6b;
+}
+
+body.teto-mode .info-card:hover {
+  background: linear-gradient(135deg, rgba(255, 153, 153, 0.3) 0%, rgba(255, 107, 107, 0.3) 100%);
+}
+
+body.teto-mode .info-card > span {
+  color: #ff6b6b;
+}
+
+body.teto-mode header h1 span {
+  animation: tetoSpin 2s ease-in-out infinite;
+}
+
+@keyframes tetoSpin {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(360deg); }
 }
 
 .container {
@@ -148,6 +192,10 @@ header h1 {
   background-color: #68c3ff;
 }
 
+.toggle input:checked + .toggle-slider.teto {
+  background-color: #ff6b6b;
+}
+
 .toggle input:checked + .toggle-slider:before {
   transform: translateX(26px);
 }
@@ -223,6 +271,7 @@ header h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .info-card {
@@ -259,6 +308,45 @@ header h1 {
 .info-card p {
   font-size: 0.9rem;
   color: #5f6368;
+}
+
+/* Version Display */
+.version-display {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.version-display:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.version-display > span:first-child {
+  font-size: 1.5rem;
+  color: #68c3ff;
+}
+
+body.teto-mode .version-display > span:first-child {
+  color: #ff6b6b;
+}
+
+.version-display span {
+  font-size: 1rem;
+  color: #202124;
+  font-weight: 500;
+}
+
+#versionNumber {
+  color: #5f6368;
+  font-weight: 400;
 }
 
 /* Footer */

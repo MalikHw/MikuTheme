@@ -12,6 +12,63 @@ body {
   position: relative;
 }
 
+/* Teto Mode Color Overrides */
+body.teto-mode .search-engine-selector {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+body.teto-mode .engine-btn:hover {
+  background: rgba(255, 153, 153, 0.3);
+}
+
+body.teto-mode .engine-btn.active {
+  background: rgba(255, 107, 107, 0.5);
+  color: #cc0000;
+}
+
+body.teto-mode .search-submit {
+  background: rgba(255, 107, 107, 0.8);
+}
+
+body.teto-mode .search-submit:hover {
+  background: rgba(255, 107, 107, 1);
+}
+
+body.teto-mode .suggestion-item:hover,
+body.teto-mode .suggestion-item.selected {
+  background: rgba(255, 107, 107, 0.2);
+}
+
+body.teto-mode .shortcut-card:hover {
+  background: rgba(255, 153, 153, 0.4);
+}
+
+body.teto-mode .shortcut-card.add-btn {
+  background: rgba(255, 107, 107, 0.3);
+  border: 2px dashed rgba(255, 107, 107, 0.6);
+}
+
+body.teto-mode .shortcut-card.add-btn:hover {
+  background: rgba(255, 107, 107, 0.5);
+  border-color: rgba(255, 107, 107, 1);
+}
+
+body.teto-mode .settings-btn:hover {
+  background: rgba(255, 107, 107, 0.8);
+}
+
+body.teto-mode .modal-btn.primary {
+  background: rgba(255, 107, 107, 1);
+}
+
+body.teto-mode .modal-btn.primary:hover {
+  background: rgba(255, 82, 82, 1);
+}
+
+body.teto-mode .modal-content input:focus {
+  border-color: rgba(255, 107, 107, 1);
+}
+
 .background-layer {
   position: fixed;
   top: 0;
@@ -433,6 +490,29 @@ body {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(255, 71, 87, 0.5);
   background: linear-gradient(135deg, #ff3838 0%, #ff5f5f 100%);
+}
+
+/* Banner Close Button */
+.banner-close {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #5f6368;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+}
+
+.banner-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+  color: #202124;
+  transform: scale(1.1);
 }
 
 /* Modal */

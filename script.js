@@ -7,9 +7,14 @@ const searchEngines = {
   brave: 'https://search.brave.com/search?q='
 };
 
+const REPO_BASE = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main';
+const VERSION_URL = `${REPO_BASE}/images-ver.json`;
+const MIKU_ZIP_URL = `${REPO_BASE}/images.zip`;
+const TETO_ZIP_URL = `${REPO_BASE}/images-teto.zip`;
+
 let currentEngine = 'google';
 let shortcuts = [];
-let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null };
+let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null, bannerHidden: false, tetoMode: false };
 let suggestionsCache = new Map();
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
@@ -18,11 +23,14 @@ let selectedSuggestionIndex = -1;
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadShortcuts();
+  await checkAndDownloadImages();
   await loadBackground();
   setupEventListeners();
   renderShortcuts();
   applyBlurSettings();
   createSuggestionsDropdown();
+  updateBannerVisibility();
+  applyTetoMode();
 });
 
 // Load Settings
@@ -35,6 +43,11 @@ async function loadSettings() {
     currentEngine = result.currentEngine;
     updateActiveEngine();
   }
+}
+
+// Save Settings
+async function saveSettings() {
+  await chrome.storage.local.set({ settings });
 }
 
 // Load Shortcuts
@@ -50,26 +63,151 @@ async function saveShortcuts() {
   await chrome.storage.local.set({ shortcuts });
 }
 
+// Check and Download Images
+async function checkAndDownloadImages() {
+  try {
+    // Check current version
+    const versionResponse = await fetch(VERSION_URL);
+    const versionData = await versionResponse.json();
+    const currentVersion = versionData.version;
+
+    // Get stored version
+    const stored = await chrome.storage.local.get(['imagesVersion', 'mikuImages', 'tetoImages', 'tetoModeUnlocked']);
+    const storedVersion = stored.imagesVersion;
+
+    // First time visit - download silently
+    if (!stored.mikuImages) {
+      console.log('First time visit - downloading Miku images...');
+      await downloadAndStoreImages(MIKU_ZIP_URL, 'mikuImages');
+      await chrome.storage.local.set({ imagesVersion: currentVersion });
+    }
+
+    // Download Teto images silently in background (no progress bar)
+    if (!stored.tetoImages) {
+      downloadAndStoreImages(TETO_ZIP_URL, 'tetoImages').catch(err => 
+        console.error('Failed to download Teto images:', err)
+      );
+    }
+
+    // Check for updates (only if not using custom background)
+    if (storedVersion && storedVersion !== currentVersion && !settings.customBg) {
+      const shouldUpdate = confirm('New Miku images are available! Would you like to update?');
+      if (shouldUpdate) {
+        await downloadAndStoreImages(MIKU_ZIP_URL, 'mikuImages');
+        
+        // Ask about Teto update if unlocked
+        if (stored.tetoModeUnlocked) {
+          const shouldUpdateTeto = confirm('Would you like to update Teto images too?');
+          if (shouldUpdateTeto) {
+            await downloadAndStoreImages(TETO_ZIP_URL, 'tetoImages');
+          }
+        }
+        
+        await chrome.storage.local.set({ imagesVersion: currentVersion });
+        location.reload();
+      }
+    }
+  } catch (error) {
+    console.error('Error checking images version:', error);
+  }
+}
+
+// Download and Store Images from ZIP
+async function downloadAndStoreImages(zipUrl, storageKey) {
+  try {
+    const response = await fetch(zipUrl);
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    
+    // Use JSZip to extract
+    const JSZip = window.JSZip || await loadJSZip();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    
+    const images = {};
+    let index = 0;
+    
+    for (const [filename, file] of Object.entries(zip.files)) {
+      if (!file.dir && (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.jpeg'))) {
+        const blob = await file.async('blob');
+        const dataUrl = await blobToDataURL(blob);
+        images[index++] = dataUrl;
+      }
+    }
+    
+    await chrome.storage.local.set({ [storageKey]: images });
+    console.log(`${storageKey} downloaded and stored:`, Object.keys(images).length, 'images');
+  } catch (error) {
+    console.error(`Error downloading ${storageKey}:`, error);
+    throw error;
+  }
+}
+
+// Load JSZip library
+async function loadJSZip() {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    script.onload = () => resolve(window.JSZip);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+// Convert Blob to Data URL
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // Load Background
 async function loadBackground() {
   const bgLayer = document.querySelector('.background-layer');
   
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
-  } else {
-    try {
-      const randomId = Math.floor(Math.random() * 7 + 1;
-      const imageUrl = `https://raw.githubusercontent.com/MalikHw/MikuTheme/main/images/${randomId}.png`;
-      
-      const response = await fetch(imageUrl, { method: 'HEAD' });
-      if (response.ok) {
-        bgLayer.style.backgroundImage = `url(${imageUrl})`;
-      } else {
-        bgLayer.style.background = 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
-      }
-    } catch (error) {
-      bgLayer.style.background = 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
+    return;
+  }
+
+  try {
+    // Get stored images
+    const storageKey = settings.tetoMode ? 'tetoImages' : 'mikuImages';
+    const stored = await chrome.storage.local.get([storageKey]);
+    const images = stored[storageKey];
+
+    if (images && Object.keys(images).length > 0) {
+      // Pick random image
+      const imageKeys = Object.keys(images);
+      const randomKey = imageKeys[Math.floor(Math.random() * imageKeys.length)];
+      const randomImage = images[randomKey];
+      bgLayer.style.backgroundImage = `url(${randomImage})`;
+    } else {
+      // Fallback gradient
+      const gradient = settings.tetoMode 
+        ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
+        : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
+      bgLayer.style.background = gradient;
     }
+  } catch (error) {
+    console.error('Error loading background:', error);
+    // Fallback gradient
+    const gradient = settings.tetoMode 
+      ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
+      : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
+    bgLayer.style.background = gradient;
+  }
+}
+
+// Apply Teto Mode Color Scheme
+function applyTetoMode() {
+  const body = document.body;
+  if (settings.tetoMode) {
+    body.classList.add('teto-mode');
+  } else {
+    body.classList.remove('teto-mode');
   }
 }
 
@@ -90,6 +228,23 @@ function applyBlurSettings() {
     bgLayer.classList.remove('blur');
     blurElements.forEach(el => el.classList.remove('blur'));
   }
+}
+
+// Update Banner Visibility
+function updateBannerVisibility() {
+  const banner = document.querySelector('.kofi-banner');
+  if (settings.bannerHidden) {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'flex';
+  }
+}
+
+// Hide Banner
+async function hideBanner() {
+  settings.bannerHidden = true;
+  await saveSettings();
+  updateBannerVisibility();
 }
 
 // Create Suggestions Dropdown
@@ -245,6 +400,16 @@ function setupEventListeners() {
   document.getElementById('settingsBtn').addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
+
+  // Banner Close Button
+  const bannerClose = document.getElementById('bannerClose');
+  if (bannerClose) {
+    bannerClose.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideBanner();
+    });
+  }
 }
 
 // Update Active Engine
@@ -393,4 +558,3 @@ function isValidUrl(string) {
     return false;
   }
 }
-

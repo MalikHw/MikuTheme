@@ -1,8 +1,12 @@
-let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null };
+let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null, tetoMode: false };
+let versionClickCount = 0;
+let tetoModeUnlocked = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
+  await loadVersion();
+  await checkTetoModeUnlocked();
   setupEventListeners();
   updateUI();
 });
@@ -21,6 +25,43 @@ async function saveSettings() {
   showToast('Settings saved!');
 }
 
+// Load Version from manifest
+async function loadVersion() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('manifest.json'));
+    const manifest = await response.json();
+    document.getElementById('versionNumber').textContent = manifest.version;
+  } catch (error) {
+    document.getElementById('versionNumber').textContent = 'Unknown';
+  }
+}
+
+// Check if Teto Mode is unlocked
+async function checkTetoModeUnlocked() {
+  const result = await chrome.storage.local.get(['tetoModeUnlocked']);
+  if (result.tetoModeUnlocked) {
+    tetoModeUnlocked = true;
+    showTetoMode();
+  }
+}
+
+// Unlock Teto Mode
+async function unlockTetoMode() {
+  tetoModeUnlocked = true;
+  await chrome.storage.local.set({ tetoModeUnlocked: true });
+  showToast('🔴 Teto Mode Unlocked! Refreshing...', false);
+  setTimeout(() => {
+    location.reload();
+  }, 1000);
+}
+
+// Show Teto Mode Toggle
+function showTetoMode() {
+  const tetoContainer = document.getElementById('tetoModeContainer');
+  tetoContainer.style.display = 'flex';
+  tetoContainer.style.animation = 'slideDown 0.5s ease';
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   // Blur Toggle
@@ -37,6 +78,14 @@ function setupEventListeners() {
     saveSettings();
   });
 
+  // Teto Mode Toggle
+  const tetoModeToggle = document.getElementById('tetoModeToggle');
+  tetoModeToggle.addEventListener('change', async () => {
+    settings.tetoMode = tetoModeToggle.checked;
+    await saveSettings();
+    applyTetoMode();
+  });
+
   // Upload Button
   const uploadBtn = document.getElementById('uploadBtn');
   const bgUpload = document.getElementById('bgUpload');
@@ -50,6 +99,23 @@ function setupEventListeners() {
   // Reset Background Button
   const resetBgBtn = document.getElementById('resetBgBtn');
   resetBgBtn.addEventListener('click', resetBackground);
+
+  // Version Click Easter Egg
+  const versionDisplay = document.getElementById('versionDisplay');
+  versionDisplay.addEventListener('click', () => {
+    if (tetoModeUnlocked) return; // Already unlocked
+    
+    versionClickCount++;
+    
+    if (versionClickCount === 5) {
+      unlockTetoMode();
+    } else if (versionClickCount >= 3) {
+      versionDisplay.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        versionDisplay.style.transform = 'scale(1)';
+      }, 200);
+    }
+  });
 }
 
 // Update UI
@@ -57,6 +123,9 @@ function updateUI() {
   // Update blur toggles
   document.getElementById('blurToggle').checked = settings.blurEnabled;
   document.getElementById('wallpaperBlurToggle').checked = settings.wallpaperBlur;
+  
+  // Update Teto Mode toggle
+  document.getElementById('tetoModeToggle').checked = settings.tetoMode;
 
   // Update background preview
   const bgPreview = document.getElementById('bgPreview');
@@ -65,6 +134,21 @@ function updateUI() {
     bgPreview.classList.add('active');
   } else {
     bgPreview.classList.remove('active');
+  }
+
+  // Apply Teto Mode if enabled
+  if (settings.tetoMode) {
+    applyTetoMode();
+  }
+}
+
+// Apply Teto Mode Color Scheme
+function applyTetoMode() {
+  const body = document.body;
+  if (settings.tetoMode) {
+    body.classList.add('teto-mode');
+  } else {
+    body.classList.remove('teto-mode');
   }
 }
 
@@ -115,4 +199,4 @@ function showToast(message, isError = false) {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
-}}
+}
