@@ -358,6 +358,14 @@ body.teto-mode .modal-content input:focus {
   border-color: rgba(104, 195, 255, 1);
 }
 
+/* Favicon styling */
+.shortcut-favicon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  margin-bottom: 0.25rem;
+}
+
 .shortcut-icon {
   font-size: 2rem;
   margin-bottom: 0.25rem;
