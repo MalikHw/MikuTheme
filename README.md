@@ -24,4 +24,4 @@ how to install:
        style="width: 200px; 
               height: auto; 
               border: none;">
-</a>50pxpx
+</a>
