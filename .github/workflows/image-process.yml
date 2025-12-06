@@ -1,0 +1,54 @@
+name: Image Processing Workflow
+
+permissions:
+  contents: write   # Allow write access to repository contents
+
+on:
+  push:
+    paths:
+      - 'images/**'      # Trigger when files in 'images' folder are changed
+      - 'images-teto/**'  # Trigger when files in 'images-teto' folder are changed
+
+jobs:
+  process-images:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up ImageMagick
+      run: sudo apt-get install -y imagemagick
+
+    - name: Find and convert .jpg/.jpeg to .png in both folders
+      run: |
+        # Find and process .jpg and .jpeg files in both 'images' and 'images-teto' directories
+        for dir in images images-teto; do
+          find $dir/ -type f \( -iname "*.jpg" -o -iname "*.jpeg" \) | while read -r img; do
+            # Define the output file name
+            png_file="${img%.*}.png"
+            # Convert the .jpg or .jpeg to .png
+            convert "$img" "$png_file"
+            # Remove the original .jpg/.jpeg file
+            rm "$img"
+          done
+        done
+
+    - name: Downscale images to 1080p in both folders
+      run: |
+        # Find and downscale all .png files in both 'images' and 'images-teto' directories
+        for dir in images images-teto; do
+          find $dir/ -type f -iname "*.png" | while read -r img; do
+            # Downscale images to 1080p, keeping aspect ratio
+            convert "$img" -resize 1920x1080\> "$img"
+          done
+        done
+
+    - name: Commit and push changes
+      run: |
+        # Check for changes
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add -A  # Stage all changes
+        git commit -m "Process and update images in 'images' and 'images-teto' (converted to PNG and downscaled to 1080p)"
+        git push
