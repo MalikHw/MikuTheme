@@ -21,10 +21,11 @@ let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
 
 // Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadSettings();
-  await loadShortcuts();
-  await loadRandomImage();
+document.addEventListener('DOMContentLoaded', () => {
+  // Start loading everything in parallel
+  loadSettings();
+  loadShortcuts();
+  loadRandomImage(); // Non-blocking now
   setupEventListeners();
   renderShortcuts();
   applyBlurSettings();
@@ -73,6 +74,9 @@ async function loadRandomImage() {
     return;
   }
 
+  // Apply fallback gradient immediately
+  applyFallbackGradient(bgLayer);
+
   try {
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
@@ -86,7 +90,6 @@ async function loadRandomImage() {
     
     if (isNaN(imageCount) || imageCount <= 0) {
       console.error('Invalid image count:', text);
-      applyFallbackGradient(bgLayer);
       return;
     }
     
@@ -107,7 +110,7 @@ async function loadRandomImage() {
       return;
     }
     
-    // Fetch and cache the new image as base64
+    // Fetch and cache the new image as base64 in the background
     const imgResponse = await fetch(imageUrl);
     const blob = await imgResponse.blob();
     const reader = new FileReader();
@@ -127,7 +130,6 @@ async function loadRandomImage() {
     
   } catch (error) {
     console.error('Error loading random image:', error);
-    applyFallbackGradient(bgLayer);
   }
 }
 
