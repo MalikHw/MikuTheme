@@ -65,7 +65,7 @@ function showTetoMode() {
 // Clear Image Cache
 async function clearImageCache() {
   try {
-    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage']);
+    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl']);
     showToast('Image cache cleared! Refresh the new tab page to load a new image.');
   } catch (error) {
     showToast('Failed to clear cache', true);
