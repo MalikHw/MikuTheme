@@ -8,9 +8,10 @@ const searchEngines = {
 };
 
 const REPO_BASE = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main';
-const VERSION_URL = `${REPO_BASE}/images-ver.json`;
-const MIKU_ZIP_URL = `${REPO_BASE}/images.zip`;
-const TETO_ZIP_URL = `${REPO_BASE}/images-teto.zip`;
+const IMAGES_FOLDER = `${REPO_BASE}/images`;
+const TETO_IMAGES_FOLDER = `${REPO_BASE}/images-teto`;
+const IMAGES_COUNT_FILE = `${REPO_BASE}/images-count.txt`;
+const TETO_IMAGES_COUNT_FILE = `${REPO_BASE}/images-teto-count.txt`;
 
 let currentEngine = 'google';
 let shortcuts = [];
@@ -23,8 +24,7 @@ let selectedSuggestionIndex = -1;
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadShortcuts();
-  await checkAndDownloadImages();
-  await loadBackground();
+  await loadRandomImage();
   setupEventListeners();
   renderShortcuts();
   applyBlurSettings();
@@ -63,142 +63,54 @@ async function saveShortcuts() {
   await chrome.storage.local.set({ shortcuts });
 }
 
-// Check and Download Images
-async function checkAndDownloadImages() {
-  try {
-    // Check current version
-    const versionResponse = await fetch(VERSION_URL);
-    const versionData = await versionResponse.json();
-    const currentVersion = versionData.version;
-
-    // Get stored version
-    const stored = await chrome.storage.local.get(['imagesVersion', 'mikuImages', 'tetoImages', 'tetoModeUnlocked']);
-    const storedVersion = stored.imagesVersion;
-
-    // First time visit - download silently
-    if (!stored.mikuImages) {
-      console.log('First time visit - downloading Miku images...');
-      await downloadAndStoreImages(MIKU_ZIP_URL, 'mikuImages');
-      await chrome.storage.local.set({ imagesVersion: currentVersion });
-    }
-
-    // Download Teto images silently in background (no progress bar)
-    if (!stored.tetoImages) {
-      downloadAndStoreImages(TETO_ZIP_URL, 'tetoImages').catch(err => 
-        console.error('Failed to download Teto images:', err)
-      );
-    }
-
-    // Check for updates (only if not using custom background)
-    if (storedVersion && storedVersion !== currentVersion && !settings.customBg) {
-      const shouldUpdate = confirm('New Miku images are available! Would you like to update?');
-      if (shouldUpdate) {
-        await downloadAndStoreImages(MIKU_ZIP_URL, 'mikuImages');
-        
-        // Ask about Teto update if unlocked
-        if (stored.tetoModeUnlocked) {
-          const shouldUpdateTeto = confirm('Would you like to update Teto images too?');
-          if (shouldUpdateTeto) {
-            await downloadAndStoreImages(TETO_ZIP_URL, 'tetoImages');
-          }
-        }
-        
-        await chrome.storage.local.set({ imagesVersion: currentVersion });
-        location.reload();
-      }
-    }
-  } catch (error) {
-    console.error('Error checking images version:', error);
-  }
-}
-
-// Download and Store Images from ZIP
-async function downloadAndStoreImages(zipUrl, storageKey) {
-  try {
-    const response = await fetch(zipUrl);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    
-    // Use JSZip to extract
-    const JSZip = window.JSZip || await loadJSZip();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    
-    const images = {};
-    let index = 0;
-    
-    for (const [filename, file] of Object.entries(zip.files)) {
-      if (!file.dir && (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.jpeg'))) {
-        const blob = await file.async('blob');
-        const dataUrl = await blobToDataURL(blob);
-        images[index++] = dataUrl;
-      }
-    }
-    
-    await chrome.storage.local.set({ [storageKey]: images });
-    console.log(`${storageKey} downloaded and stored:`, Object.keys(images).length, 'images');
-  } catch (error) {
-    console.error(`Error downloading ${storageKey}:`, error);
-    throw error;
-  }
-}
-
-// Load JSZip library
-async function loadJSZip() {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    script.onload = () => resolve(window.JSZip);
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-// Convert Blob to Data URL
-function blobToDataURL(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Load Background
-async function loadBackground() {
+// Load Random Image from Repo
+async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
+  // If custom background is set, use it
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
     return;
   }
 
   try {
-    // Get stored images
-    const storageKey = settings.tetoMode ? 'tetoImages' : 'mikuImages';
-    const stored = await chrome.storage.local.get([storageKey]);
-    const images = stored[storageKey];
-
-    if (images && Object.keys(images).length > 0) {
-      // Pick random image
-      const imageKeys = Object.keys(images);
-      const randomKey = imageKeys[Math.floor(Math.random() * imageKeys.length)];
-      const randomImage = images[randomKey];
-      bgLayer.style.backgroundImage = `url(${randomImage})`;
-    } else {
-      // Fallback gradient
-      const gradient = settings.tetoMode 
-        ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
-        : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
-      bgLayer.style.background = gradient;
+    const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
+    const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
+    
+    // Fetch the count file
+    const response = await fetch(countFile);
+    const text = await response.text();
+    const imageCount = parseInt(text.trim());
+    
+    if (isNaN(imageCount) || imageCount <= 0) {
+      console.error('Invalid image count:', text);
+      applyFallbackGradient(bgLayer);
+      return;
     }
+    
+    console.log(`Found ${imageCount} images available`);
+    
+    // Pick random image number (1 to n)
+    const randomNum = Math.floor(Math.random() * imageCount) + 1;
+    const imageUrl = `${imagesFolder}/${randomNum}.png`;
+    
+    console.log(`Loading random image: ${randomNum}.png`);
+    
+    // Set background
+    bgLayer.style.backgroundImage = `url(${imageUrl})`;
+    
   } catch (error) {
-    console.error('Error loading background:', error);
-    // Fallback gradient
-    const gradient = settings.tetoMode 
-      ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
-      : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
-    bgLayer.style.background = gradient;
+    console.error('Error loading random image:', error);
+    applyFallbackGradient(bgLayer);
   }
+}
+
+// Apply fallback gradient
+function applyFallbackGradient(bgLayer) {
+  const gradient = settings.tetoMode 
+    ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
+    : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
+  bgLayer.style.background = gradient;
 }
 
 // Apply Teto Mode Color Scheme
@@ -211,7 +123,7 @@ function applyTetoMode() {
   }
 }
 
-// Apply Blur Settings - Now includes all UI elements
+// Apply Blur Settings
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
   const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .suggestions-dropdown');
