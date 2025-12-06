@@ -62,6 +62,16 @@ function showTetoMode() {
   tetoContainer.style.animation = 'slideDown 0.5s ease';
 }
 
+// Clear Image Cache
+async function clearImageCache() {
+  try {
+    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage']);
+    showToast('Image cache cleared! Refresh the new tab page to load a new image.');
+  } catch (error) {
+    showToast('Failed to clear cache', true);
+  }
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   // Blur Toggle
@@ -99,6 +109,10 @@ function setupEventListeners() {
   // Reset Background Button
   const resetBgBtn = document.getElementById('resetBgBtn');
   resetBgBtn.addEventListener('click', resetBackground);
+
+  // Clear Cache Button
+  const clearCacheBtn = document.getElementById('clearCacheBtn');
+  clearCacheBtn.addEventListener('click', clearImageCache);
 
   // Version Click Easter Egg
   const versionDisplay = document.getElementById('versionDisplay');
