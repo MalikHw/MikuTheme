@@ -43,7 +43,7 @@ jobs:
     - name: Create Firefox package
       run: |
         mkdir -p dist/firefox
-        rsync -av --exclude='images.zip' --exclude='images-teto.zip'' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
+        rsync -av --exclude='images.zip' --exclude='images-teto.zip' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
         cp firefox/manifest.json dist/firefox/manifest.json
         cd dist/firefox
         zip -r ../miku-theme-firefox.zip .
