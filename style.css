@@ -69,6 +69,67 @@ body.teto-mode .modal-content input:focus {
   border-color: rgba(255, 107, 107, 1);
 }
 
+/* Wallpaper Loader */
+.wallpaper-loader {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 2000;
+  font-size: 0.9rem;
+  color: #3c4043;
+}
+
+.wallpaper-loader.active {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.wallpaper-loader > span:first-child {
+  font-size: 1.2rem;
+  color: #68c3ff;
+  animation: downloadPulse 1.5s ease-in-out infinite;
+}
+
+body.teto-mode .wallpaper-loader > span:first-child {
+  color: #ff6b6b;
+}
+
+@keyframes downloadPulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+.loader-text {
+  font-weight: 500;
+}
+
+.loader-percentage {
+  font-weight: 700;
+  color: #68c3ff;
+  margin-left: 0.25rem;
+}
+
+body.teto-mode .loader-percentage {
+  color: #ff6b6b;
+}
+
 .background-layer {
   position: fixed;
   top: 0;
