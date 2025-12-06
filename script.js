@@ -74,18 +74,10 @@ async function loadRandomImage() {
   }
 
   try {
-    const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
-    
-    // Check if we have a cached image
-    const cached = await chrome.storage.local.get([cacheKey]);
-    if (cached[cacheKey]) {
-      console.log('Loading cached background image');
-      bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
-      return;
-    }
-
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
+    const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
+    const cacheUrlKey = settings.tetoMode ? 'cachedTetoImageUrl' : 'cachedImageUrl';
     
     // Fetch the count file
     const response = await fetch(countFile);
@@ -106,15 +98,27 @@ async function loadRandomImage() {
     
     console.log(`Loading random image: ${randomNum}.png`);
     
-    // Fetch and cache the image as base64
+    // Check if this specific image URL is already cached
+    const cached = await chrome.storage.local.get([cacheKey, cacheUrlKey]);
+    
+    if (cached[cacheKey] && cached[cacheUrlKey] === imageUrl) {
+      console.log('Loading cached background image');
+      bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
+      return;
+    }
+    
+    // Fetch and cache the new image as base64
     const imgResponse = await fetch(imageUrl);
     const blob = await imgResponse.blob();
     const reader = new FileReader();
     
     reader.onloadend = async () => {
       const base64data = reader.result;
-      // Cache the image
-      await chrome.storage.local.set({ [cacheKey]: base64data });
+      // Cache the image along with its URL
+      await chrome.storage.local.set({ 
+        [cacheKey]: base64data,
+        [cacheUrlKey]: imageUrl 
+      });
       bgLayer.style.backgroundImage = `url(${base64data})`;
       console.log('Image cached successfully');
     };
