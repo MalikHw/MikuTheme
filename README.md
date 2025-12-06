@@ -17,5 +17,11 @@ how to install:
 .
 .'..
 .
-support me here if u want to:
-<img src="https://raw.githubusercontent.com/MalikHw/MikuTheme/main/Panel_MyWishlist_L_WaterGradient.png" alt="auto" style="max-width: 20%; height:20%;">
+- support me here if u want to:
+<a href="https://throne.com/MalikHw47" target="_blank">
+  <img src="https://raw.githubusercontent.com/MalikHw/MikuTheme/main/Panel_MyWishlist_L_WaterGradient.png" 
+       alt="Miku Theme Wishlist Panel - Click to go to Throne" 
+       style="width: 200px; 
+              height: auto; 
+              border: none;">
+</a>50pxpx
