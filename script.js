@@ -63,7 +63,7 @@ async function saveShortcuts() {
   await chrome.storage.local.set({ shortcuts });
 }
 
-// Load Random Image from Repo
+// Load Random Image from Repo with Caching
 async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
@@ -74,6 +74,16 @@ async function loadRandomImage() {
   }
 
   try {
+    const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
+    
+    // Check if we have a cached image
+    const cached = await chrome.storage.local.get([cacheKey]);
+    if (cached[cacheKey]) {
+      console.log('Loading cached background image');
+      bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
+      return;
+    }
+
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
     
@@ -96,8 +106,20 @@ async function loadRandomImage() {
     
     console.log(`Loading random image: ${randomNum}.png`);
     
-    // Set background
-    bgLayer.style.backgroundImage = `url(${imageUrl})`;
+    // Fetch and cache the image as base64
+    const imgResponse = await fetch(imageUrl);
+    const blob = await imgResponse.blob();
+    const reader = new FileReader();
+    
+    reader.onloadend = async () => {
+      const base64data = reader.result;
+      // Cache the image
+      await chrome.storage.local.set({ [cacheKey]: base64data });
+      bgLayer.style.backgroundImage = `url(${base64data})`;
+      console.log('Image cached successfully');
+    };
+    
+    reader.readAsDataURL(blob);
     
   } catch (error) {
     console.error('Error loading random image:', error);
@@ -168,7 +190,7 @@ function createSuggestionsDropdown() {
   searchContainer.appendChild(dropdown);
 }
 
-// Fetch Search Suggestions from Brave API
+// Fetch Search Suggestions from DuckDuckGo API
 async function fetchSuggestions(query) {
   if (!query.trim()) {
     hideSuggestions();
@@ -181,7 +203,7 @@ async function fetchSuggestions(query) {
   }
 
   try {
-    const response = await fetch(`https://search.brave.com/api/suggest?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`https://duckduckgo.com/ac/?q=${encodeURIComponent(query)}&type=list`);
     const data = await response.json();
     
     if (data && data[1] && Array.isArray(data[1])) {
@@ -254,6 +276,17 @@ function navigateSuggestions(direction) {
 
   items[selectedSuggestionIndex].classList.add('selected');
   document.querySelector('.search-bar').value = currentSuggestions[selectedSuggestionIndex];
+}
+
+// Get Favicon for URL
+function getFaviconUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    // Use Google's favicon service as fallback
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+  } catch (e) {
+    return null;
+  }
 }
 
 // Setup Event Listeners
@@ -359,13 +392,20 @@ function renderShortcuts() {
   applyBlurSettings();
 }
 
-// Create Shortcut Card
+// Create Shortcut Card with Favicon
 function createShortcutCard(shortcut, index) {
   const card = document.createElement('a');
   card.className = 'shortcut-card';
   card.href = shortcut.url;
+  
+  const faviconUrl = getFaviconUrl(shortcut.url);
+  const iconHtml = faviconUrl 
+    ? `<img src="${faviconUrl}" class="shortcut-favicon" alt="${escapeHtml(shortcut.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+       <div class="shortcut-icon nf nf-md-link_variant" style="display: none;"></div>`
+    : `<div class="shortcut-icon nf nf-md-link_variant"></div>`;
+  
   card.innerHTML = `
-    <div class="shortcut-icon nf nf-md-link_variant"></div>
+    ${iconHtml}
     <div class="shortcut-title">${escapeHtml(shortcut.title)}</div>
     <button class="delete-shortcut nf nf-md-close"></button>
   `;
