@@ -36,14 +36,14 @@ jobs:
     - name: Create Chrome package
       run: |
         mkdir -p dist/chrome
-        rsync -av --exclude='images.zip' --exclude='images-teto.zip' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
+        rsync -av --exclude='images' --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
         cd dist/chrome
         zip -r ../miku-theme-chrome.zip .
     
     - name: Create Firefox package
       run: |
         mkdir -p dist/firefox
-        rsync -av --exclude='images.zip' --exclude='images-teto.zip' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
+        rsync -av --exclude='images' --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
         cp firefox/manifest.json dist/firefox/manifest.json
         cd dist/firefox
         zip -r ../miku-theme-firefox.zip .
