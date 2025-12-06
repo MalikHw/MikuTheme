@@ -21,17 +21,23 @@ let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  // Start loading everything in parallel
-  loadSettings();
-  loadShortcuts();
-  loadRandomImage(); // Non-blocking now
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load settings first (needed for theme)
+  await loadSettings();
+  await loadShortcuts();
+  
+  // Apply theme immediately
+  applyTetoMode();
+  applyBlurSettings();
+  updateBannerVisibility();
+  
+  // Start loading image in background (non-blocking)
+  loadRandomImage();
+  
+  // Setup the rest
   setupEventListeners();
   renderShortcuts();
-  applyBlurSettings();
   createSuggestionsDropdown();
-  updateBannerVisibility();
-  applyTetoMode();
 });
 
 // Load Settings
