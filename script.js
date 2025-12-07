@@ -15,26 +15,32 @@ const TETO_IMAGES_COUNT_FILE = `${REPO_BASE}/images-teto-count.txt`;
 
 let currentEngine = 'google';
 let shortcuts = [];
-let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null, bannerHidden: false, tetoMode: false };
+let settings = { 
+  blurEnabled: false, 
+  wallpaperBlur: false, 
+  customBg: null, 
+  bannerHidden: false, 
+  tetoMode: false,
+  bgDisplayMode: 'cover',
+  customColorEnabled: false,
+  customColor: '#68c3ff'
+};
 let suggestionsCache = new Map();
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load settings first (needed for theme)
   await loadSettings();
   await loadShortcuts();
   
-  // Apply theme immediately
   applyTetoMode();
+  applyCustomColor();
   applyBlurSettings();
   updateBannerVisibility();
   
-  // Start loading image in background (non-blocking)
   loadRandomImage();
   
-  // Setup the rest
   setupEventListeners();
   renderShortcuts();
   createSuggestionsDropdown();
@@ -44,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadSettings() {
   const result = await chrome.storage.local.get(['settings', 'currentEngine']);
   if (result.settings) {
-    settings = result.settings;
+    settings = { ...settings, ...result.settings };
   }
   if (result.currentEngine) {
     currentEngine = result.currentEngine;
@@ -74,6 +80,9 @@ async function saveShortcuts() {
 async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
+  // Apply display mode
+  applyBackgroundDisplayMode(bgLayer);
+  
   // If custom background is set, use it
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
@@ -89,7 +98,6 @@ async function loadRandomImage() {
     const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
     const cacheUrlKey = settings.tetoMode ? 'cachedTetoImageUrl' : 'cachedImageUrl';
     
-    // Fetch the count file
     const response = await fetch(countFile);
     const text = await response.text();
     const imageCount = parseInt(text.trim());
@@ -99,27 +107,18 @@ async function loadRandomImage() {
       return;
     }
     
-    console.log(`Found ${imageCount} images available`);
-    
-    // Pick random image number (1 to n)
     const randomNum = Math.floor(Math.random() * imageCount) + 1;
     const imageUrl = `${imagesFolder}/${randomNum}.png`;
     
-    console.log(`Loading random image: ${randomNum}.png`);
-    
-    // Check if this specific image URL is already cached
     const cached = await chrome.storage.local.get([cacheKey, cacheUrlKey]);
     
     if (cached[cacheKey] && cached[cacheUrlKey] === imageUrl) {
-      console.log('Loading cached background image');
       bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
       return;
     }
     
-    // Show loading indicator
     showLoadingIndicator();
     
-    // Fetch and cache the new image as base64 with progress tracking
     const imgResponse = await fetch(imageUrl);
     const contentLength = imgResponse.headers.get('content-length');
     const total = parseInt(contentLength, 10);
@@ -130,7 +129,6 @@ async function loadRandomImage() {
     
     while (true) {
       const { done, value } = await reader.read();
-      
       if (done) break;
       
       chunks.push(value);
@@ -142,19 +140,16 @@ async function loadRandomImage() {
       }
     }
     
-    // Combine chunks into blob
     const blob = new Blob(chunks);
     const fileReader = new FileReader();
     
     fileReader.onloadend = async () => {
       const base64data = fileReader.result;
-      // Cache the image along with its URL
       await chrome.storage.local.set({ 
         [cacheKey]: base64data,
         [cacheUrlKey]: imageUrl 
       });
       bgLayer.style.backgroundImage = `url(${base64data})`;
-      console.log('Image cached successfully');
       hideLoadingIndicator();
     };
     
@@ -166,7 +161,22 @@ async function loadRandomImage() {
   }
 }
 
-// Show loading indicator
+// Apply Background Display Mode
+function applyBackgroundDisplayMode(bgLayer) {
+  const modes = {
+    cover: { size: 'cover', position: 'center' },
+    contain: { size: 'contain', position: 'center' },
+    fill: { size: '100% 100%', position: 'center' },
+    stretch: { size: '100% 100%', position: 'center' },
+    tile: { size: 'auto', position: 'top left', repeat: 'repeat' }
+  };
+  
+  const mode = modes[settings.bgDisplayMode] || modes.cover;
+  bgLayer.style.backgroundSize = mode.size;
+  bgLayer.style.backgroundPosition = mode.position;
+  bgLayer.style.backgroundRepeat = mode.repeat || 'no-repeat';
+}
+
 function showLoadingIndicator() {
   const indicator = document.createElement('div');
   indicator.id = 'wallpaperLoader';
@@ -176,90 +186,88 @@ function showLoadingIndicator() {
     <span class="loader-text">loading wallpapah <span class="loader-percentage">0%</span></span>
   `;
   document.body.appendChild(indicator);
-  
-  // Trigger animation
-  setTimeout(() => {
-    indicator.classList.add('active');
-  }, 10);
+  setTimeout(() => indicator.classList.add('active'), 10);
 }
 
-// Update loading progress
 function updateLoadingProgress(percentage) {
   const loader = document.getElementById('wallpaperLoader');
   if (loader) {
     const percentageEl = loader.querySelector('.loader-percentage');
-    if (percentageEl) {
-      percentageEl.textContent = `${percentage}%`;
-    }
+    if (percentageEl) percentageEl.textContent = `${percentage}%`;
   }
 }
 
-// Hide loading indicator
 function hideLoadingIndicator() {
   const loader = document.getElementById('wallpaperLoader');
   if (loader) {
     loader.classList.remove('active');
-    setTimeout(() => {
-      loader.remove();
-    }, 300);
+    setTimeout(() => loader.remove(), 300);
   }
 }
 
-// Apply fallback gradient
 function applyFallbackGradient(bgLayer) {
-  const gradient = settings.tetoMode 
-    ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
-    : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
-  bgLayer.style.background = gradient;
-}
-
-// Apply Teto Mode Color Scheme
-function applyTetoMode() {
-  const body = document.body;
-  if (settings.tetoMode) {
-    body.classList.add('teto-mode');
+  if (settings.customColorEnabled && settings.customBg) {
+    const color = settings.customColor;
+    bgLayer.style.background = `linear-gradient(135deg, ${color} 0%, ${adjustColorBrightness(color, -20)} 100%)`;
   } else {
-    body.classList.remove('teto-mode');
+    const gradient = settings.tetoMode 
+      ? 'linear-gradient(135deg, #ff9999 0%, #ff6b6b 100%)'
+      : 'linear-gradient(135deg, #9ee5ff 0%, #68c3ff 100%)';
+    bgLayer.style.background = gradient;
   }
 }
 
-// Apply Blur Settings
+function applyTetoMode() {
+  document.body.classList.toggle('teto-mode', settings.tetoMode);
+}
+
+function applyCustomColor() {
+  const body = document.body;
+  if (settings.customColorEnabled && settings.customBg) {
+    body.classList.add('custom-color');
+    document.documentElement.style.setProperty('--custom-primary', settings.customColor);
+    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(settings.customColor, -20));
+    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(settings.customColor, 20));
+  } else {
+    body.classList.remove('custom-color');
+  }
+}
+
+function adjustColorBrightness(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+  const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+  return '#' + ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1);
+}
+
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
   const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .suggestions-dropdown');
   
   if (settings.blurEnabled) {
     blurElements.forEach(el => el.classList.add('blur'));
-    
-    if (settings.wallpaperBlur) {
-      bgLayer.classList.add('blur');
-    } else {
-      bgLayer.classList.remove('blur');
-    }
+    bgLayer.classList.toggle('blur', settings.wallpaperBlur);
   } else {
     bgLayer.classList.remove('blur');
     blurElements.forEach(el => el.classList.remove('blur'));
   }
 }
 
-// Update Banner Visibility
 function updateBannerVisibility() {
   const banner = document.querySelector('.kofi-banner');
-  if (settings.bannerHidden) {
-    banner.style.display = 'none';
-  } else {
-    banner.style.display = 'flex';
+  if (banner) {
+    banner.style.display = settings.bannerHidden ? 'none' : 'flex';
   }
 }
 
-// Hide Banner
 async function hideBanner() {
   settings.bannerHidden = true;
   await saveSettings();
   updateBannerVisibility();
 }
 
-// Create Suggestions Dropdown
 function createSuggestionsDropdown() {
   const searchContainer = document.querySelector('.search-container');
   const dropdown = document.createElement('div');
@@ -268,7 +276,6 @@ function createSuggestionsDropdown() {
   searchContainer.appendChild(dropdown);
 }
 
-// Fetch Search Suggestions from DuckDuckGo API
 async function fetchSuggestions(query) {
   if (!query.trim()) {
     hideSuggestions();
@@ -284,7 +291,7 @@ async function fetchSuggestions(query) {
     const response = await fetch(`https://duckduckgo.com/ac/?q=${encodeURIComponent(query)}&type=list`);
     const data = await response.json();
     
-    if (data && data[1] && Array.isArray(data[1])) {
+    if (data?.[1] && Array.isArray(data[1])) {
       const suggestions = data[1].slice(0, 8);
       suggestionsCache.set(query, suggestions);
       displaySuggestions(suggestions);
@@ -294,7 +301,6 @@ async function fetchSuggestions(query) {
   }
 }
 
-// Display Suggestions
 function displaySuggestions(suggestions) {
   const dropdown = document.getElementById('suggestionsDropdown');
   currentSuggestions = suggestions;
@@ -324,7 +330,6 @@ function displaySuggestions(suggestions) {
   });
 }
 
-// Hide Suggestions
 function hideSuggestions() {
   const dropdown = document.getElementById('suggestionsDropdown');
   dropdown.classList.remove('active');
@@ -332,12 +337,10 @@ function hideSuggestions() {
   selectedSuggestionIndex = -1;
 }
 
-// Navigate Suggestions with Keyboard
 function navigateSuggestions(direction) {
   if (currentSuggestions.length === 0) return;
 
   const items = document.querySelectorAll('.suggestion-item');
-  
   if (items.length === 0) return;
 
   if (selectedSuggestionIndex >= 0) {
@@ -356,20 +359,16 @@ function navigateSuggestions(direction) {
   document.querySelector('.search-bar').value = currentSuggestions[selectedSuggestionIndex];
 }
 
-// Get Favicon for URL
 function getFaviconUrl(url) {
   try {
     const urlObj = new URL(url);
-    // Use Google's favicon service as fallback
     return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
   } catch (e) {
     return null;
   }
 }
 
-// Setup Event Listeners
 function setupEventListeners() {
-  // Search Engine Selection
   document.querySelectorAll('.engine-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       currentEngine = btn.dataset.engine;
@@ -378,7 +377,6 @@ function setupEventListeners() {
     });
   });
 
-  // Search Bar
   const searchBar = document.querySelector('.search-bar');
   const searchSubmit = document.querySelector('.search-submit');
   
@@ -386,9 +384,7 @@ function setupEventListeners() {
   
   searchBar.addEventListener('input', (e) => {
     clearTimeout(suggestionTimeout);
-    suggestionTimeout = setTimeout(() => {
-      fetchSuggestions(e.target.value);
-    }, 300);
+    suggestionTimeout = setTimeout(() => fetchSuggestions(e.target.value), 300);
   });
 
   searchBar.addEventListener('keydown', (e) => {
@@ -410,21 +406,16 @@ function setupEventListeners() {
     }
   });
 
-  searchBar.addEventListener('blur', () => {
-    setTimeout(hideSuggestions, 200);
-  });
-  
+  searchBar.addEventListener('blur', () => setTimeout(hideSuggestions, 200));
   searchSubmit.addEventListener('click', () => {
     performSearch();
     hideSuggestions();
   });
 
-  // Settings Button
   document.getElementById('settingsBtn').addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
 
-  // Banner Close Button
   const bannerClose = document.getElementById('bannerClose');
   if (bannerClose) {
     bannerClose.addEventListener('click', (e) => {
@@ -435,14 +426,12 @@ function setupEventListeners() {
   }
 }
 
-// Update Active Engine
 function updateActiveEngine() {
   document.querySelectorAll('.engine-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.engine === currentEngine);
   });
 }
 
-// Perform Search
 function performSearch() {
   const query = document.querySelector('.search-bar').value.trim();
   if (query) {
@@ -450,7 +439,6 @@ function performSearch() {
   }
 }
 
-// Render Shortcuts
 function renderShortcuts() {
   const grid = document.getElementById('shortcutsGrid');
   grid.innerHTML = '';
@@ -470,7 +458,6 @@ function renderShortcuts() {
   applyBlurSettings();
 }
 
-// Create Shortcut Card with Favicon
 function createShortcutCard(shortcut, index) {
   const card = document.createElement('a');
   card.className = 'shortcut-card';
@@ -500,7 +487,6 @@ function createShortcutCard(shortcut, index) {
   return card;
 }
 
-// Create Add Button
 function createAddButton() {
   const card = document.createElement('div');
   card.className = 'shortcut-card add-btn';
@@ -509,14 +495,10 @@ function createAddButton() {
     <div class="shortcut-title">Add</div>
   `;
 
-  card.addEventListener('click', () => {
-    showAddShortcutModal();
-  });
-
+  card.addEventListener('click', () => showAddShortcutModal());
   return card;
 }
 
-// Show Add Shortcut Modal
 function showAddShortcutModal() {
   const modal = document.createElement('div');
   modal.className = 'modal active';
@@ -535,14 +517,10 @@ function showAddShortcutModal() {
   document.body.appendChild(modal);
 
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
+    if (e.target === modal) modal.remove();
   });
 
-  document.getElementById('cancelBtn').addEventListener('click', () => {
-    modal.remove();
-  });
+  document.getElementById('cancelBtn').addEventListener('click', () => modal.remove());
 
   document.getElementById('addBtn').addEventListener('click', () => {
     const title = document.getElementById('shortcutTitle').value.trim();
@@ -561,25 +539,19 @@ function showAddShortcutModal() {
   const inputs = modal.querySelectorAll('input');
   inputs.forEach(input => {
     input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('addBtn').click();
-      }
+      if (e.key === 'Enter') document.getElementById('addBtn').click();
     });
   });
 
-  setTimeout(() => {
-    document.getElementById('shortcutTitle').focus();
-  }, 100);
+  setTimeout(() => document.getElementById('shortcutTitle').focus(), 100);
 }
 
-// Helper function to escape HTML
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Helper function to validate URL
 function isValidUrl(string) {
   try {
     const url = new URL(string);
