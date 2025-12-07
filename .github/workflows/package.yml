@@ -21,22 +21,12 @@ jobs:
       with:
         node-version: '18'
     
-    - name: Generate or restore CRX private key
-      run: |
-        if [ ! -f "key.pem" ]; then
-          echo "No key.pem found. Generating new key..."
-          openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out key.pem
-          echo "New key generated!"
-          echo "KEY_GENERATED=true" >> $GITHUB_ENV
-        else
-          echo "Using existing key.pem from repository"
-          echo "KEY_GENERATED=false" >> $GITHUB_ENV
-        fi
-    
     - name: Create Chrome package
       run: |
         mkdir -p dist/chrome
         rsync -av --exclude='images' --exclude="firefox-script.js" --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='key.pem' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
+        # Ensure UPDATE.md is included
+        cp UPDATE.md dist/chrome/ 2>/dev/null || echo "UPDATE.md not found, skipping"
         cd dist/chrome
         zip -r ../miku-theme-chrome.zip .
     
@@ -46,14 +36,10 @@ jobs:
         rsync -av --exclude='images' --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='key.pem' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
         cp firefox/manifest.json dist/firefox/manifest.json
         cp firefox/newtab.html dist/firefox/newtab.html
+        # Ensure UPDATE.md is included
+        cp UPDATE.md dist/firefox/ 2>/dev/null || echo "UPDATE.md not found, skipping"
         cd dist/firefox
         zip -r ../miku-theme-firefox.zip .
-    
-    - name: Generate Chrome CRX
-      run: |
-        npm install -g crx3
-        crx3 dist/chrome -p key.pem -o dist/miku-theme.crx
-        echo "CRX file created successfully"
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -62,7 +48,6 @@ jobs:
         path: |
           dist/miku-theme-chrome.zip
           dist/miku-theme-firefox.zip
-          dist/miku-theme.crx
 
     - name: Generate timestamp tag
       id: timestamp
@@ -86,6 +71,5 @@ jobs:
         files: |
           dist/miku-theme-chrome.zip
           dist/miku-theme-firefox.zip
-          dist/miku-theme.crx
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
