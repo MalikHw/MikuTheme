@@ -72,12 +72,47 @@
         </div>
         <div class="setting-item">
           <div class="setting-info">
+            <label for="bgDisplayMode">Display Mode</label>
+            <p class="setting-description">Choose how the background image is displayed</p>
+          </div>
+          <select id="bgDisplayMode" class="setting-select">
+            <option value="cover">Cover (Default)</option>
+            <option value="contain">Contain</option>
+            <option value="fill">Fill</option>
+            <option value="stretch">Stretch</option>
+            <option value="tile">Tile</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <div class="setting-info">
             <label>Image Cache</label>
             <p class="setting-description">Clear cached background images to load new random images</p>
           </div>
           <button class="btn danger" id="clearCacheBtn">
             <span class="nf nf-md-delete"></span> Clear Cache
           </button>
+        </div>
+      </section>
+
+      <!-- Custom Color Section -->
+      <section class="settings-section">
+        <h2><span class="nf nf-md-palette"></span> Custom Color Scheme</h2>
+        <div class="setting-item">
+          <div class="setting-info">
+            <label for="customColorToggle">Enable Custom Color</label>
+            <p class="setting-description">Use custom colors (only available with custom wallpaper)</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="customColorToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item" id="customColorContainer" style="display: none;">
+          <div class="setting-info">
+            <label for="customColorPicker">Primary Color</label>
+            <p class="setting-description">Choose your primary theme color</p>
+          </div>
+          <input type="color" id="customColorPicker" class="color-picker" value="#68c3ff">
         </div>
       </section>
 
@@ -111,6 +146,13 @@
             <div>
               <strong>Support Me</strong>
               <p>Ko-fi</p>
+            </div>
+          </a>
+          <a href="https://throne.com/MalikHw47" target="_blank" class="info-card throne">
+            <span class="nf nf-fa-gift"></span>
+            <div>
+              <strong>Buy Me A Gift!</strong>
+              <p>Throne</p>
             </div>
           </a>
         </div>
