@@ -1,4 +1,4 @@
---excludecludeclude: Package Extension
+name: Package Extension
 
 on:
   push:
