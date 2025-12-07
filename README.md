@@ -10,13 +10,13 @@ how to install:
 - download the zip files of chrome/firefox
 - (FIREFOX IS UNTESTED)
 - drag the zip to the extensions Options
-.
-..
-.
-...
-.
-.'..
-.
+
+## This shi got:
+- Automatic updates checker (and tells u how to install)(pls dont manually update when u get this from ms edge store)
+- auto new miku updates
+- an easter egg apparently
+- CUSTOM WALLPAPER/COLOR SCHEME
+- idk
 - support me here if u want to:
 <a href="https://throne.com/MalikHw47" target="_blank">
   <img src="https://raw.githubusercontent.com/MalikHw/MikuTheme/main/Panel_MyWishlist_L_WaterGradient.png" 
