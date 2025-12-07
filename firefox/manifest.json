@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Miku Theme",
   "description": "A Hatsune Miku themed New Tab page for Firefox!",
-  "version": "1.6",
+  "version": "1.7",
   "author": "MalikHw47",
   "icons": {
     "16": "icon.png",
@@ -15,7 +15,7 @@
   "permissions": [
     "storage",
     "https://raw.githubusercontent.com/*",
-    "https://search.brave.com/*"
+    "https://duckduckgo.com/*"
   ],
   "browser_action": {
     "default_popup": "popup.html",
@@ -31,6 +31,4 @@
       "strict_min_version": "78.0"
     }
   }
-
 }
-
