@@ -1,31 +1,39 @@
-let settings = { blurEnabled: false, wallpaperBlur: false, customBg: null, tetoMode: false };
+let settings = { 
+  blurEnabled: false, 
+  wallpaperBlur: false, 
+  customBg: null, 
+  tetoMode: false,
+  bgDisplayMode: 'cover',
+  customColorEnabled: false,
+  customColor: '#68c3ff'
+};
 let versionClickCount = 0;
 let tetoModeUnlocked = false;
 
-// Initialize
+const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/manifest.json';
+const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-chrome.zip';
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadVersion();
   await checkTetoModeUnlocked();
+  await checkForUpdates();
   setupEventListeners();
   updateUI();
 });
 
-// Load Settings
 async function loadSettings() {
   const result = await chrome.storage.local.get(['settings']);
   if (result.settings) {
-    settings = result.settings;
+    settings = { ...settings, ...result.settings };
   }
 }
 
-// Save Settings
 async function saveSettings() {
   await chrome.storage.local.set({ settings });
   showToast('Settings saved!');
 }
 
-// Load Version from manifest
 async function loadVersion() {
   try {
     const response = await fetch(chrome.runtime.getURL('manifest.json'));
@@ -36,7 +44,134 @@ async function loadVersion() {
   }
 }
 
-// Check if Teto Mode is unlocked
+async function checkForUpdates() {
+  try {
+    const localManifest = await fetch(chrome.runtime.getURL('manifest.json')).then(r => r.json());
+    const remoteManifest = await fetch(REPO_MANIFEST_URL).then(r => r.json());
+    
+    if (localManifest.version !== remoteManifest.version) {
+      showUpdateAvailable(localManifest.version, remoteManifest.version);
+    }
+  } catch (error) {
+    console.error('Failed to check for updates:', error);
+  }
+}
+
+function showUpdateAvailable(currentVersion, newVersion) {
+  const updateBanner = document.createElement('div');
+  updateBanner.className = 'update-banner';
+  updateBanner.innerHTML = `
+    <div class="update-content">
+      <span class="nf nf-md-update"></span>
+      <div class="update-info">
+        <strong>Update Available!</strong>
+        <p>Version ${newVersion} is available (you have ${currentVersion})</p>
+      </div>
+      <button class="btn secondary" id="downloadUpdate">
+        <span class="nf nf-md-download"></span> Download Update
+      </button>
+      <button class="update-close nf nf-md-close"></button>
+    </div>
+  `;
+  
+  document.querySelector('.container').insertBefore(updateBanner, document.querySelector('header'));
+  
+  document.getElementById('downloadUpdate').addEventListener('click', () => {
+    window.open(LATEST_RELEASE_URL, '_blank');
+    showUpdateInstructions(newVersion);
+  });
+  
+  updateBanner.querySelector('.update-close').addEventListener('click', () => {
+    updateBanner.remove();
+  });
+}
+
+async function showUpdateInstructions(newVersion) {
+  // Fetch UPDATE.md from the release
+  try {
+    const updateMdUrl = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/UPDATE.md';
+    const response = await fetch(updateMdUrl);
+    const instructions = await response.text();
+    
+    showUpdateModal(instructions, newVersion);
+  } catch (error) {
+    // Fallback instructions if UPDATE.md doesn't exist yet
+    const fallbackInstructions = `# How to Update Miku Theme
+
+## Step 1: Download
+The download should start automatically. If not, click the download button again.
+
+## Step 2: Extract
+Extract the downloaded ZIP file to a folder on your computer.
+
+## Step 3: Update Extension
+
+### For Chrome/Edge/Brave:
+1. Go to \`chrome://extensions\`
+2. Find "Miku Theme - MalikHw"
+3. Click "Remove" to uninstall the old version
+4. Click "Load unpacked"
+5. Select the newly extracted folder
+
+### For Firefox:
+1. Go to \`about:addons\`
+2. Remove the old Miku Theme
+3. Go to \`about:debugging#/runtime/this-firefox\`
+4. Click "Load Temporary Add-on"
+5. Select manifest.json from the extracted folder
+
+## ⚠️ Your settings will be preserved!
+Your shortcuts, wallpaper, and preferences are stored separately and won't be lost.
+
+---
+**New in v${newVersion}:** Check the release notes for details!`;
+    
+    showUpdateModal(fallbackInstructions, newVersion);
+  }
+}
+
+function showUpdateModal(markdownContent, version) {
+  const modal = document.createElement('div');
+  modal.className = 'modal active update-modal';
+  
+  // Simple markdown to HTML conversion
+  const htmlContent = markdownContent
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/^- (.*$)/gim, '<li>$1</li>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hl])/gim, '<p>')
+    .replace(/<\/li>\n<li>/g, '</li><li>')
+    .replace(/<li>/g, '<ul><li>')
+    .replace(/<\/li>(?!\s*<li>)/g, '</li></ul>');
+  
+  modal.innerHTML = `
+    <div class="modal-content update-instructions">
+      <div class="update-header">
+        <h2><span class="nf nf-md-information"></span> Update Instructions</h2>
+        <button class="update-modal-close nf nf-md-close"></button>
+      </div>
+      <div class="update-body">
+        ${htmlContent}
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn primary" id="closeInstructions">Got it!</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  modal.querySelector('.update-modal-close').addEventListener('click', () => modal.remove());
+  document.getElementById('closeInstructions').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
 async function checkTetoModeUnlocked() {
   const result = await chrome.storage.local.get(['tetoModeUnlocked']);
   if (result.tetoModeUnlocked) {
@@ -45,24 +180,19 @@ async function checkTetoModeUnlocked() {
   }
 }
 
-// Unlock Teto Mode
 async function unlockTetoMode() {
   tetoModeUnlocked = true;
   await chrome.storage.local.set({ tetoModeUnlocked: true });
   showToast('🔴 Teto Mode Unlocked! Refreshing...', false);
-  setTimeout(() => {
-    location.reload();
-  }, 1000);
+  setTimeout(() => location.reload(), 1000);
 }
 
-// Show Teto Mode Toggle
 function showTetoMode() {
   const tetoContainer = document.getElementById('tetoModeContainer');
   tetoContainer.style.display = 'flex';
   tetoContainer.style.animation = 'slideDown 0.5s ease';
 }
 
-// Clear Image Cache
 async function clearImageCache() {
   try {
     await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl']);
@@ -72,23 +202,19 @@ async function clearImageCache() {
   }
 }
 
-// Setup Event Listeners
 function setupEventListeners() {
-  // Blur Toggle
   const blurToggle = document.getElementById('blurToggle');
   blurToggle.addEventListener('change', () => {
     settings.blurEnabled = blurToggle.checked;
     saveSettings();
   });
 
-  // Wallpaper Blur Toggle
   const wallpaperBlurToggle = document.getElementById('wallpaperBlurToggle');
   wallpaperBlurToggle.addEventListener('change', () => {
     settings.wallpaperBlur = wallpaperBlurToggle.checked;
     saveSettings();
   });
 
-  // Teto Mode Toggle
   const tetoModeToggle = document.getElementById('tetoModeToggle');
   tetoModeToggle.addEventListener('change', async () => {
     settings.tetoMode = tetoModeToggle.checked;
@@ -96,28 +222,43 @@ function setupEventListeners() {
     applyTetoMode();
   });
 
-  // Upload Button
+  const bgDisplaySelect = document.getElementById('bgDisplayMode');
+  bgDisplaySelect.addEventListener('change', async () => {
+    settings.bgDisplayMode = bgDisplaySelect.value;
+    await saveSettings();
+    updateBackgroundPreview();
+  });
+
+  const customColorToggle = document.getElementById('customColorToggle');
+  customColorToggle.addEventListener('change', async () => {
+    settings.customColorEnabled = customColorToggle.checked;
+    await saveSettings();
+    updateCustomColorUI();
+    applyCustomColor();
+  });
+
+  const customColorPicker = document.getElementById('customColorPicker');
+  customColorPicker.addEventListener('input', async (e) => {
+    settings.customColor = e.target.value;
+    await saveSettings();
+    applyCustomColor();
+  });
+
   const uploadBtn = document.getElementById('uploadBtn');
   const bgUpload = document.getElementById('bgUpload');
   
-  uploadBtn.addEventListener('click', () => {
-    bgUpload.click();
-  });
-
+  uploadBtn.addEventListener('click', () => bgUpload.click());
   bgUpload.addEventListener('change', handleImageUpload);
 
-  // Reset Background Button
   const resetBgBtn = document.getElementById('resetBgBtn');
   resetBgBtn.addEventListener('click', resetBackground);
 
-  // Clear Cache Button
   const clearCacheBtn = document.getElementById('clearCacheBtn');
   clearCacheBtn.addEventListener('click', clearImageCache);
 
-  // Version Click Easter Egg
   const versionDisplay = document.getElementById('versionDisplay');
   versionDisplay.addEventListener('click', () => {
-    if (tetoModeUnlocked) return; // Already unlocked
+    if (tetoModeUnlocked) return;
     
     versionClickCount++;
     
@@ -125,65 +266,109 @@ function setupEventListeners() {
       unlockTetoMode();
     } else if (versionClickCount >= 3) {
       versionDisplay.style.transform = 'scale(1.1)';
-      setTimeout(() => {
-        versionDisplay.style.transform = 'scale(1)';
-      }, 200);
+      setTimeout(() => versionDisplay.style.transform = 'scale(1)', 200);
     }
   });
 }
 
-// Update UI
 function updateUI() {
-  // Update blur toggles
   document.getElementById('blurToggle').checked = settings.blurEnabled;
   document.getElementById('wallpaperBlurToggle').checked = settings.wallpaperBlur;
-  
-  // Update Teto Mode toggle
   document.getElementById('tetoModeToggle').checked = settings.tetoMode;
+  document.getElementById('bgDisplayMode').value = settings.bgDisplayMode || 'cover';
+  document.getElementById('customColorToggle').checked = settings.customColorEnabled;
+  document.getElementById('customColorPicker').value = settings.customColor || '#68c3ff';
 
-  // Update background preview
+  updateBackgroundPreview();
+  updateCustomColorUI();
+
+  if (settings.tetoMode) {
+    applyTetoMode();
+  }
+  
+  if (settings.customColorEnabled) {
+    applyCustomColor();
+  }
+}
+
+function updateBackgroundPreview() {
   const bgPreview = document.getElementById('bgPreview');
   if (settings.customBg) {
     bgPreview.style.backgroundImage = `url(${settings.customBg})`;
+    
+    const modes = {
+      cover: { size: 'cover', position: 'center' },
+      contain: { size: 'contain', position: 'center' },
+      fill: { size: '100% 100%', position: 'center' },
+      stretch: { size: '100% 100%', position: 'center' },
+      tile: { size: 'auto', position: 'top left', repeat: 'repeat' }
+    };
+    
+    const mode = modes[settings.bgDisplayMode] || modes.cover;
+    bgPreview.style.backgroundSize = mode.size;
+    bgPreview.style.backgroundPosition = mode.position;
+    bgPreview.style.backgroundRepeat = mode.repeat || 'no-repeat';
+    
     bgPreview.classList.add('active');
   } else {
     bgPreview.classList.remove('active');
   }
-
-  // Apply Teto Mode if enabled
-  if (settings.tetoMode) {
-    applyTetoMode();
-  }
 }
 
-// Apply Teto Mode Color Scheme
-function applyTetoMode() {
-  const body = document.body;
-  if (settings.tetoMode) {
-    body.classList.add('teto-mode');
+function updateCustomColorUI() {
+  const colorPickerContainer = document.getElementById('customColorContainer');
+  const isEnabled = settings.customColorEnabled && settings.customBg;
+  
+  colorPickerContainer.style.display = isEnabled ? 'flex' : 'none';
+  
+  if (!settings.customBg) {
+    document.getElementById('customColorToggle').disabled = true;
+    document.getElementById('customColorToggle').checked = false;
+    settings.customColorEnabled = false;
   } else {
-    body.classList.remove('teto-mode');
+    document.getElementById('customColorToggle').disabled = false;
   }
 }
 
-// Handle Image Upload
+function applyTetoMode() {
+  document.body.classList.toggle('teto-mode', settings.tetoMode);
+}
+
+function applyCustomColor() {
+  const body = document.body;
+  if (settings.customColorEnabled && settings.customBg) {
+    body.classList.add('custom-color');
+    document.documentElement.style.setProperty('--custom-primary', settings.customColor);
+    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(settings.customColor, -20));
+    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(settings.customColor, 20));
+  } else {
+    body.classList.remove('custom-color');
+  }
+}
+
+function adjustColorBrightness(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+  const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+  return '#' + ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1);
+}
+
 async function handleImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Check file type
   if (!file.type.startsWith('image/')) {
     showToast('Please upload an image file!', true);
     return;
   }
 
-  // Check file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
     showToast('Image too large! Max size is 5MB.', true);
     return;
   }
 
-  // Read file as data URL
   const reader = new FileReader();
   reader.onload = async (e) => {
     settings.customBg = e.target.result;
@@ -194,15 +379,14 @@ async function handleImageUpload(event) {
   reader.readAsDataURL(file);
 }
 
-// Reset Background
 async function resetBackground() {
   settings.customBg = null;
+  settings.customColorEnabled = false;
   await saveSettings();
   updateUI();
   showToast('Background reset to random!');
 }
 
-// Show Toast Notification
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
@@ -210,7 +394,5 @@ function showToast(message, isError = false) {
   toast.style.color = isError ? 'white' : '#202124';
   toast.classList.add('show');
 
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3000);
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
