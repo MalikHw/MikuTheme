@@ -95,47 +95,4 @@ jobs:
           dist/miku-theme-chrome.zip
           dist/miku-theme-firefox.zip
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        zip -r ../miku-theme-chrome.zip .
-    
-    - name: Create Firefox package(for the arch nerdies)
-      run: |
-        mkdir -p dist/firefox
-        rsync -av --exclude='Panel_MyWishlist_L_WaterGradient.png' --exclude='images' --exclude='images-count.txt' --exclude="screenshot.png" --exclude="screenshot2.png" --exclude="screenshot3.png" --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
-        # Override with Firefox-specific files
-        cp firefox/manifest.json dist/firefox/manifest.json
-        cp firefox/newtab.html dist/firefox/newtab.html
-        cp firefox/settings.html dist/firefox/settings.html
-        # Add Firefox wrapper scripts
-        cp firefox-script.js dist/firefox/firefox-script.js
-        cp firefox-settings-script.js dist/firefox/firefox-settings-script.js
-        # Ensure UPDATE.md is included
-        cp UPDATE.md dist/firefox/ 2>/dev/null || echo "UPDATE.md not found, skipping"
-        cd dist/firefox
-        zip -r ../miku-theme-firefox.zip .
-    
-    - name: Upload the final arti-facts
-      uses: actions/upload-artifact@v4
-      with:
-        name: extension-packages
-        path: |
-          dist/miku-theme-chrome.zip
-          dist/miku-theme-firefox.zip
-
-    - name: Create the git tag
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag ${{ steps.version.outputs.version }}
-        git push origin ${{ steps.version.outputs.version }}
-
-    - name: auto release this shit
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.version.outputs.version }}
-        name: Auto Build Update
-        body: "...idk? Read the main README.md?💀"
-        files: |
-          dist/miku-theme-chrome.zip
-          dist/miku-theme-firefox.zip
-      env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
