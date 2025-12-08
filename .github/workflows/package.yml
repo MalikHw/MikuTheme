@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - 'manifest.json'
-      - 'firefox/manifest.json'
   workflow_dispatch:
 
 jobs:
@@ -16,18 +15,37 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup the fucking node.JS (who uses this in the big 2025?)
+    - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
     
-    - name: Extract version from manifest(fml)
+    - name: Extract version from manifest
       id: version
       run: |
         VERSION=$(jq -r '.version' manifest.json)
-        echo "version=v$VERSION" >> $GITHUB_OUTPUT
+        echo "base_version=v$VERSION" >> $GITHUB_OUTPUT
+        
+        # Check if tag exists and find next available suffix
+        TAG="v$VERSION"
+        SUFFIX=0
+        
+        while git ls-remote --tags origin | grep -q "refs/tags/$TAG"; do
+          SUFFIX=$((SUFFIX + 1))
+          TAG="v$VERSION-$SUFFIX"
+        done
+        
+        echo "version=$TAG" >> $GITHUB_OUTPUT
+        echo "📦 Using tag: $TAG"
     
-    - name: Create Chrome package...(Duh)
+    - name: Sync Firefox manifest version
+      run: |
+        VERSION=$(jq -r '.version' manifest.json)
+        jq --arg ver "$VERSION" '.version = $ver' firefox/manifest.json > firefox/manifest.json.tmp
+        mv firefox/manifest.json.tmp firefox/manifest.json
+        echo "✅ Firefox manifest version synced to $VERSION"
+    
+    - name: Create Chrome package
       run: |
         mkdir -p dist/chrome
         rsync -av --exclude='Panel_MyWishlist_L_WaterGradient.png' --exclude='images' --exclude="firefox-script.js" --exclude="firefox-settings-script.js" --exclude="screenshot.png" --exclude="screenshot2.png" --exclude="screenshot3.png" --exclude='images-count.txt' --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/chrome/
@@ -35,6 +53,49 @@ jobs:
         cp UPDATE.md dist/chrome/ 2>/dev/null || echo "UPDATE.md not found, skipping"
         cd dist/chrome
         zip -r ../miku-theme-chrome.zip .
+    
+    - name: Create Firefox package
+      run: |
+        mkdir -p dist/firefox
+        rsync -av --exclude='Panel_MyWishlist_L_WaterGradient.png' --exclude='images' --exclude='images-count.txt' --exclude="screenshot.png" --exclude="screenshot2.png" --exclude="screenshot3.png" --exclude='images-teto-count.txt' --exclude='images-teto' --exclude='dist' --exclude='.git' --exclude='.github' --exclude='firefox' . dist/firefox/
+        # Override with Firefox-specific files
+        cp firefox/manifest.json dist/firefox/manifest.json
+        cp firefox/newtab.html dist/firefox/newtab.html
+        cp firefox/settings.html dist/firefox/settings.html
+        # Add Firefox wrapper scripts
+        cp firefox-script.js dist/firefox/firefox-script.js
+        cp firefox-settings-script.js dist/firefox/firefox-settings-script.js
+        # Ensure UPDATE.md is included
+        cp UPDATE.md dist/firefox/ 2>/dev/null || echo "UPDATE.md not found, skipping"
+        cd dist/firefox
+        zip -r ../miku-theme-firefox.zip .
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-packages
+        path: |
+          dist/miku-theme-chrome.zip
+          dist/miku-theme-firefox.zip
+
+    - name: Create Git tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.version.outputs.version }}
+        git push origin ${{ steps.version.outputs.version }}
+
+    - name: Create Auto Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Auto Build Update
+        body: "...idk? Read the main README.md?💀"
+        files: |
+          dist/miku-theme-chrome.zip
+          dist/miku-theme-firefox.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        zip -r ../miku-theme-chrome.zip .
     
     - name: Create Firefox package(for the arch nerdies)
       run: |
