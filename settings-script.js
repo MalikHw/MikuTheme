@@ -1,5 +1,5 @@
 let settings = { 
-  blurEnabled: false, 
+  blurEnabled: true, // Changed to true by default
   wallpaperBlur: false, 
   customBg: null, 
   tetoMode: false,
@@ -195,7 +195,7 @@ function showTetoMode() {
 
 async function clearImageCache() {
   try {
-    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl']);
+    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl', 'allCachedImages', 'allCachedTetoImages']);
     showToast('Image cache cleared! Refresh the new tab page to load a new image.');
   } catch (error) {
     showToast('Failed to clear cache', true);
@@ -395,4 +395,4 @@ function showToast(message, isError = false) {
   toast.classList.add('show');
 
   setTimeout(() => toast.classList.remove('show'), 3000);
-}
+    }
