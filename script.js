@@ -35,8 +35,10 @@ let settings = {
   tetoMode: false,
   bgDisplayMode: 'cover',
   customColorEnabled: false,
-  customColor: '#68c3ff'
+  customColor: '#68c3ff',
+  tempUnit: 'celsius'
 };
+let isOnline = navigator.onLine;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -59,6 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   setupEventListeners();
   renderShortcuts();
+  
+  // Listen for online/offline events
+  window.addEventListener('online', () => {
+    isOnline = true;
+    loadWeather();
+  });
+  
+  window.addEventListener('offline', () => {
+    isOnline = false;
+    showOfflineWeather();
+  });
 });
 
 // Load Settings
@@ -96,33 +109,71 @@ async function loadWeather() {
   const weatherDisplay = document.getElementById('weatherDisplay');
   if (!weatherDisplay) return;
 
+  if (!isOnline) {
+    showOfflineWeather();
+    return;
+  }
+
   try {
     // Get user's location
     const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject);
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
     });
 
     const { latitude, longitude } = position.coords;
 
     // Fetch weather from Open-Meteo API
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=celsius&windspeed_unit=kmh`
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=celsius&windspeed_unit=kmh`,
+      { signal: AbortSignal.timeout(5000) }
     );
     const data = await response.json();
 
-    const temp = Math.round(data.current.temperature_2m);
+    const tempC = Math.round(data.current.temperature_2m);
     const weatherCode = data.current.weathercode;
     const windSpeed = data.current.windspeed_10m;
+
+    // Store celsius temp for conversion
+    weatherDisplay.dataset.tempC = tempC;
 
     // Determine weather condition from WMO code
     const weatherCondition = getWeatherCondition(weatherCode, windSpeed);
 
-    weatherDisplay.textContent = `${weatherCondition} ${temp}°C`;
+    updateWeatherDisplay(weatherCondition, tempC);
     weatherDisplay.style.display = 'flex';
   } catch (error) {
     console.log('Could not load weather:', error);
-    weatherDisplay.style.display = 'none';
+    showOfflineWeather();
   }
+}
+
+function showOfflineWeather() {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (!weatherDisplay) return;
+  
+  weatherDisplay.innerHTML = `
+    <span class="nf nf-md-cloud_off_outline"></span>
+    <span>No Internet~</span>
+  `;
+  weatherDisplay.style.display = 'flex';
+  weatherDisplay.style.cursor = 'default';
+}
+
+function updateWeatherDisplay(condition, tempC) {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  const unit = settings.tempUnit || 'celsius';
+  const temp = unit === 'fahrenheit' ? celsiusToFahrenheit(tempC) : tempC;
+  const symbol = unit === 'fahrenheit' ? '°F' : '°C';
+  
+  weatherDisplay.innerHTML = `
+    <span class="nf nf-md-weather_partly_cloudy"></span>
+    <span>${condition} ${temp}${symbol}</span>
+  `;
+  weatherDisplay.style.cursor = 'pointer';
+}
+
+function celsiusToFahrenheit(c) {
+  return Math.round((c * 9/5) + 32);
 }
 
 function getWeatherCondition(code, windSpeed) {
@@ -158,37 +209,34 @@ async function loadRandomImage() {
   // Apply fallback gradient immediately
   applyFallbackGradient(bgLayer);
 
+  const cacheKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
+
+  // If offline, load from cache only
+  if (!isOnline) {
+    await loadRandomCachedImage(cacheKey, bgLayer);
+    return;
+  }
+
   try {
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
-    const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
-    const cacheUrlKey = settings.tetoMode ? 'cachedTetoImageUrl' : 'cachedImageUrl';
-    const allCachedKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
     
-    const response = await fetch(countFile);
+    const response = await fetch(countFile, { signal: AbortSignal.timeout(5000) });
     const text = await response.text();
     const imageCount = parseInt(text.trim());
     
     if (isNaN(imageCount) || imageCount <= 0) {
       console.error('Invalid image count:', text);
-      await loadRandomCachedImage(allCachedKey, bgLayer);
+      await loadRandomCachedImage(cacheKey, bgLayer);
       return;
     }
     
     const randomNum = Math.floor(Math.random() * imageCount) + 1;
     const imageUrl = `${imagesFolder}/${randomNum}.png`;
     
-    const cached = await chrome.storage.local.get([cacheKey, cacheUrlKey]);
-    
-    if (cached[cacheKey] && cached[cacheUrlKey] === imageUrl) {
-      bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
-      applyBackgroundDisplayMode(bgLayer);
-      return;
-    }
-    
     showLoadingIndicator();
     
-    const imgResponse = await fetch(imageUrl);
+    const imgResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
     const contentLength = imgResponse.headers.get('content-length');
     const total = parseInt(contentLength, 10);
     let loaded = 0;
@@ -215,39 +263,24 @@ async function loadRandomImage() {
     fileReader.onloadend = async () => {
       const base64data = fileReader.result;
       
-      // Save to current cache
-      await chrome.storage.local.set({ 
-        [cacheKey]: base64data,
-        [cacheUrlKey]: imageUrl 
-      });
-      
       // Add to all cached images array
-      const allCached = await chrome.storage.local.get([allCachedKey]);
-      const cachedArray = allCached[allCachedKey] || [];
+      const allCached = await chrome.storage.local.get([cacheKey]);
+      let cachedArray = allCached[cacheKey] || [];
       
       // Check if this image is already cached
       const exists = cachedArray.some(img => img.url === imageUrl);
       if (!exists) {
-        const maxCacheSize = settings.tetoMode ? 10 : 20;
+        // Delete oldest 15 images (or 7 for teto) if cache is getting large
+        const deleteThreshold = settings.tetoMode ? 7 : 15;
         
-        // If we've reached max cache size, remove the largest one
-        if (cachedArray.length >= maxCacheSize) {
-          let largestIndex = 0;
-          let largestSize = cachedArray[0]?.data?.length || 0;
-          
-          for (let i = 1; i < cachedArray.length; i++) {
-            const size = cachedArray[i]?.data?.length || 0;
-            if (size > largestSize) {
-              largestSize = size;
-              largestIndex = i;
-            }
-          }
-          
-          cachedArray.splice(largestIndex, 1);
+        if (cachedArray.length >= deleteThreshold) {
+          // Sort by size and remove largest images
+          cachedArray.sort((a, b) => (b.size || 0) - (a.size || 0));
+          cachedArray = cachedArray.slice(deleteThreshold);
         }
         
         cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length });
-        await chrome.storage.local.set({ [allCachedKey]: cachedArray });
+        await chrome.storage.local.set({ [cacheKey]: cachedArray });
       }
       
       bgLayer.style.backgroundImage = `url(${base64data})`;
@@ -260,8 +293,7 @@ async function loadRandomImage() {
   } catch (error) {
     console.error('Error loading random image (offline?):', error);
     hideLoadingIndicator();
-    const allCachedKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
-    await loadRandomCachedImage(allCachedKey, bgLayer);
+    await loadRandomCachedImage(cacheKey, bgLayer);
   }
 }
 
@@ -435,6 +467,21 @@ function setupEventListeners() {
       e.preventDefault();
       e.stopPropagation();
       hideBanner();
+    });
+  }
+
+  // Weather click to toggle temperature unit
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (weatherDisplay) {
+    weatherDisplay.addEventListener('click', async () => {
+      if (!isOnline || !weatherDisplay.dataset.tempC) return;
+      
+      settings.tempUnit = settings.tempUnit === 'celsius' ? 'fahrenheit' : 'celsius';
+      await saveSettings();
+      
+      const tempC = parseInt(weatherDisplay.dataset.tempC);
+      const weatherText = weatherDisplay.textContent.split(' ')[0];
+      updateWeatherDisplay(weatherText, tempC);
     });
   }
 }
