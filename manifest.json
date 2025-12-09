@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Miku Theme",
+  "name": "MikuTab",
   "description": "a Hatsune Miku themed New Tab page for chromium browsers!",
-  "version": "2.0",
+  "version": "2.1",
   "author": "MalikHw47",
   "icons": {
     "16": "icon16.png",
@@ -21,6 +21,7 @@
   ],
   "options_page": "settings.html"
 }
+
 
 
 
