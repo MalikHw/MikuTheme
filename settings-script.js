@@ -1,5 +1,5 @@
 let settings = { 
-  blurEnabled: true, // Changed to true by default
+  blurEnabled: true,
   wallpaperBlur: false, 
   customBg: null, 
   tetoMode: false,
@@ -14,6 +14,7 @@ const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/m
 const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-chrome.zip';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await window.MikuStorage.init();
   await loadSettings();
   await loadVersion();
   await checkTetoModeUnlocked();
@@ -23,14 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSettings() {
-  const result = await chrome.storage.local.get(['settings']);
-  if (result.settings) {
-    settings = { ...settings, ...result.settings };
+  const savedSettings = await window.MikuStorage.getSettings();
+  if (savedSettings && Object.keys(savedSettings).length > 0) {
+    settings = { ...settings, ...savedSettings };
   }
 }
 
 async function saveSettings() {
-  await chrome.storage.local.set({ settings });
+  await window.MikuStorage.saveSettings(settings);
   showToast('Settings saved!');
 }
 
@@ -87,7 +88,6 @@ function showUpdateAvailable(currentVersion, newVersion) {
 }
 
 async function showUpdateInstructions(newVersion) {
-  // Fetch UPDATE.md from the release
   try {
     const updateMdUrl = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/UPDATE.md';
     const response = await fetch(updateMdUrl);
@@ -95,7 +95,6 @@ async function showUpdateInstructions(newVersion) {
     
     showUpdateModal(instructions, newVersion);
   } catch (error) {
-    // Fallback instructions if UPDATE.md doesn't exist yet
     const fallbackInstructions = `# How to Update Miku Theme
 
 ## Step 1: Download
@@ -134,7 +133,6 @@ function showUpdateModal(markdownContent, version) {
   const modal = document.createElement('div');
   modal.className = 'modal active update-modal';
   
-  // Simple markdown to HTML conversion
   const htmlContent = markdownContent
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -173,8 +171,8 @@ function showUpdateModal(markdownContent, version) {
 }
 
 async function checkTetoModeUnlocked() {
-  const result = await chrome.storage.local.get(['tetoModeUnlocked']);
-  if (result.tetoModeUnlocked) {
+  const unlocked = await window.MikuStorage.getOtherData('tetoModeUnlocked');
+  if (unlocked) {
     tetoModeUnlocked = true;
     showTetoMode();
   }
@@ -182,7 +180,7 @@ async function checkTetoModeUnlocked() {
 
 async function unlockTetoMode() {
   tetoModeUnlocked = true;
-  await chrome.storage.local.set({ tetoModeUnlocked: true });
+  await window.MikuStorage.saveOtherData('tetoModeUnlocked', true);
   showToast('🔴 Teto Mode Unlocked! Refreshing...', false);
   setTimeout(() => location.reload(), 1000);
 }
@@ -195,7 +193,7 @@ function showTetoMode() {
 
 async function clearImageCache() {
   try {
-    await chrome.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl', 'allCachedImages', 'allCachedTetoImages']);
+    await window.MikuStorage.clearAllImageCaches();
     showToast('Image cache cleared! Refresh the new tab page to load a new image.');
   } catch (error) {
     showToast('Failed to clear cache', true);
@@ -395,4 +393,4 @@ function showToast(message, isError = false) {
   toast.classList.add('show');
 
   setTimeout(() => toast.classList.remove('show'), 3000);
-    }
+}
