@@ -35,8 +35,10 @@ let settings = {
   tetoMode: false,
   bgDisplayMode: 'cover',
   customColorEnabled: false,
-  customColor: '#68c3ff'
+  customColor: '#68c3ff',
+  tempUnit: 'celsius'
 };
+let isOnline = navigator.onLine;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,14 +57,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateBannerVisibility();
   
   loadRandomImage();
+  loadWeather();
   
   setupEventListeners();
   renderShortcuts();
+  
+  // Listen for online/offline events
+  window.addEventListener('online', () => {
+    isOnline = true;
+    loadWeather();
+  });
+  
+  window.addEventListener('offline', () => {
+    isOnline = false;
+    showOfflineWeather();
+  });
 });
 
 // Load Settings
 async function loadSettings() {
-  const result = await browser.storage.local.get(['settings', 'currentEngine']);
+  const result = await chrome.storage.local.get(['settings', 'currentEngine']);
   if (result.settings) {
     settings = { ...settings, ...result.settings };
   }
@@ -74,12 +88,12 @@ async function loadSettings() {
 
 // Save Settings
 async function saveSettings() {
-  await browser.storage.local.set({ settings });
+  await chrome.storage.local.set({ settings });
 }
 
 // Load Shortcuts
 async function loadShortcuts() {
-  const result = await browser.storage.local.get(['shortcuts']);
+  const result = await chrome.storage.local.get(['shortcuts']);
   if (result.shortcuts) {
     shortcuts = result.shortcuts;
   }
@@ -87,55 +101,142 @@ async function loadShortcuts() {
 
 // Save Shortcuts
 async function saveShortcuts() {
-  await browser.storage.local.set({ shortcuts });
+  await chrome.storage.local.set({ shortcuts });
+}
+
+// Weather Functions
+async function loadWeather() {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (!weatherDisplay) return;
+
+  if (!isOnline) {
+    showOfflineWeather();
+    return;
+  }
+
+  try {
+    // Get user's location
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+    });
+
+    const { latitude, longitude } = position.coords;
+
+    // Fetch weather from Open-Meteo API
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=celsius&windspeed_unit=kmh`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data = await response.json();
+
+    const tempC = Math.round(data.current.temperature_2m);
+    const weatherCode = data.current.weathercode;
+    const windSpeed = data.current.windspeed_10m;
+
+    // Store celsius temp for conversion
+    weatherDisplay.dataset.tempC = tempC;
+
+    // Determine weather condition from WMO code
+    const weatherCondition = getWeatherCondition(weatherCode, windSpeed);
+
+    updateWeatherDisplay(weatherCondition, tempC);
+    weatherDisplay.style.display = 'flex';
+  } catch (error) {
+    console.log('Could not load weather:', error);
+    showOfflineWeather();
+  }
+}
+
+function showOfflineWeather() {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (!weatherDisplay) return;
+  
+  weatherDisplay.innerHTML = `
+    <span class="nf nf-md-cloud_off_outline"></span>
+    <span>No Internet~</span>
+  `;
+  weatherDisplay.style.display = 'flex';
+  weatherDisplay.style.cursor = 'default';
+}
+
+function updateWeatherDisplay(condition, tempC) {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  const unit = settings.tempUnit || 'celsius';
+  const temp = unit === 'fahrenheit' ? celsiusToFahrenheit(tempC) : tempC;
+  const symbol = unit === 'fahrenheit' ? '°F' : '°C';
+  
+  weatherDisplay.innerHTML = `
+    <span class="nf nf-md-weather_partly_cloudy"></span>
+    <span>${condition} ${temp}${symbol}</span>
+  `;
+  weatherDisplay.style.cursor = 'pointer';
+}
+
+function celsiusToFahrenheit(c) {
+  return Math.round((c * 9/5) + 32);
+}
+
+function getWeatherCondition(code, windSpeed) {
+  // WMO Weather interpretation codes
+  if (code === 0) return 'Clear';
+  if (code === 1 || code === 2) return 'Sunny';
+  if (code === 3) return 'Cloudy';
+  if (code === 45 || code === 48) return 'Foggy';
+  if (code >= 51 && code <= 55) return 'Drizzly';
+  if (code >= 61 && code <= 65) return 'Rainy';
+  if (code >= 71 && code <= 77) return 'Snowy';
+  if (code >= 80 && code <= 82) return 'Rainy';
+  if (code >= 85 && code <= 86) return 'Snowy';
+  if (code >= 95 && code <= 99) return 'Stormy';
+  
+  // Check wind speed for "Windy" condition
+  if (windSpeed > 30) return 'Windy';
+  
+  return 'Sunny';
 }
 
 // Load Random Image from Repo with Caching and Offline Support
 async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
-  // Apply display mode
-  applyBackgroundDisplayMode(bgLayer);
-  
   // If custom background is set, use it
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
+    applyBackgroundDisplayMode(bgLayer);
     return;
   }
 
   // Apply fallback gradient immediately
   applyFallbackGradient(bgLayer);
 
+  const cacheKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
+
+  // If offline, load from cache only
+  if (!isOnline) {
+    await loadRandomCachedImage(cacheKey, bgLayer);
+    return;
+  }
+
   try {
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
-    const cacheKey = settings.tetoMode ? 'cachedTetoImage' : 'cachedImage';
-    const cacheUrlKey = settings.tetoMode ? 'cachedTetoImageUrl' : 'cachedImageUrl';
-    const allCachedKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
     
-    const response = await fetch(countFile);
+    const response = await fetch(countFile, { signal: AbortSignal.timeout(5000) });
     const text = await response.text();
     const imageCount = parseInt(text.trim());
     
     if (isNaN(imageCount) || imageCount <= 0) {
       console.error('Invalid image count:', text);
-      await loadRandomCachedImage(allCachedKey, bgLayer);
+      await loadRandomCachedImage(cacheKey, bgLayer);
       return;
     }
     
     const randomNum = Math.floor(Math.random() * imageCount) + 1;
     const imageUrl = `${imagesFolder}/${randomNum}.png`;
     
-    const cached = await browser.storage.local.get([cacheKey, cacheUrlKey]);
-    
-    if (cached[cacheKey] && cached[cacheUrlKey] === imageUrl) {
-      bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
-      return;
-    }
-    
     showLoadingIndicator();
     
-    const imgResponse = await fetch(imageUrl);
+    const imgResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
     const contentLength = imgResponse.headers.get('content-length');
     const total = parseInt(contentLength, 10);
     let loaded = 0;
@@ -162,42 +263,28 @@ async function loadRandomImage() {
     fileReader.onloadend = async () => {
       const base64data = fileReader.result;
       
-      // Save to current cache
-      await browser.storage.local.set({ 
-        [cacheKey]: base64data,
-        [cacheUrlKey]: imageUrl 
-      });
-      
       // Add to all cached images array
-      const allCached = await browser.storage.local.get([allCachedKey]);
-      const cachedArray = allCached[allCachedKey] || [];
+      const allCached = await chrome.storage.local.get([cacheKey]);
+      let cachedArray = allCached[cacheKey] || [];
       
       // Check if this image is already cached
       const exists = cachedArray.some(img => img.url === imageUrl);
       if (!exists) {
-        const maxCacheSize = settings.tetoMode ? 10 : 20;
+        // Delete oldest 15 images (or 7 for teto) if cache is getting large
+        const deleteThreshold = settings.tetoMode ? 7 : 15;
         
-        // If we've reached max cache size, remove the largest one
-        if (cachedArray.length >= maxCacheSize) {
-          let largestIndex = 0;
-          let largestSize = cachedArray[0]?.data?.length || 0;
-          
-          for (let i = 1; i < cachedArray.length; i++) {
-            const size = cachedArray[i]?.data?.length || 0;
-            if (size > largestSize) {
-              largestSize = size;
-              largestIndex = i;
-            }
-          }
-          
-          cachedArray.splice(largestIndex, 1);
+        if (cachedArray.length >= deleteThreshold) {
+          // Sort by size and remove largest images
+          cachedArray.sort((a, b) => (b.size || 0) - (a.size || 0));
+          cachedArray = cachedArray.slice(deleteThreshold);
         }
         
         cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length });
-        await browser.storage.local.set({ [allCachedKey]: cachedArray });
+        await chrome.storage.local.set({ [cacheKey]: cachedArray });
       }
       
       bgLayer.style.backgroundImage = `url(${base64data})`;
+      applyBackgroundDisplayMode(bgLayer);
       hideLoadingIndicator();
     };
     
@@ -206,21 +293,21 @@ async function loadRandomImage() {
   } catch (error) {
     console.error('Error loading random image (offline?):', error);
     hideLoadingIndicator();
-    const allCachedKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
-    await loadRandomCachedImage(allCachedKey, bgLayer);
+    await loadRandomCachedImage(cacheKey, bgLayer);
   }
 }
 
 // Load random cached image when offline
 async function loadRandomCachedImage(cacheKey, bgLayer) {
   try {
-    const cached = await browser.storage.local.get([cacheKey]);
+    const cached = await chrome.storage.local.get([cacheKey]);
     const cachedArray = cached[cacheKey] || [];
     
     if (cachedArray.length > 0) {
       const randomIndex = Math.floor(Math.random() * cachedArray.length);
       const randomCached = cachedArray[randomIndex];
       bgLayer.style.backgroundImage = `url(${randomCached.data})`;
+      applyBackgroundDisplayMode(bgLayer);
       console.log('Loaded cached image (offline mode)');
     } else {
       console.log('No cached images available, using gradient');
@@ -233,17 +320,17 @@ async function loadRandomCachedImage(cacheKey, bgLayer) {
 // Apply Background Display Mode
 function applyBackgroundDisplayMode(bgLayer) {
   const modes = {
-    cover: { size: 'cover', position: 'center' },
-    contain: { size: 'contain', position: 'center' },
-    fill: { size: '100% 100%', position: 'center' },
-    stretch: { size: '100% 100%', position: 'center' },
+    cover: { size: 'cover', position: 'center', repeat: 'no-repeat' },
+    contain: { size: 'contain', position: 'center', repeat: 'no-repeat' },
+    fill: { size: '100% 100%', position: 'center', repeat: 'no-repeat' },
+    stretch: { size: '100% 100%', position: 'center', repeat: 'no-repeat' },
     tile: { size: 'auto', position: 'top left', repeat: 'repeat' }
   };
   
   const mode = modes[settings.bgDisplayMode] || modes.cover;
   bgLayer.style.backgroundSize = mode.size;
   bgLayer.style.backgroundPosition = mode.position;
-  bgLayer.style.backgroundRepeat = mode.repeat || 'no-repeat';
+  bgLayer.style.backgroundRepeat = mode.repeat;
 }
 
 function showLoadingIndicator() {
@@ -313,7 +400,7 @@ function adjustColorBrightness(hex, percent) {
 
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
-  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner');
+  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .weather-display');
   
   if (settings.blurEnabled) {
     blurElements.forEach(el => el.classList.add('blur'));
@@ -337,37 +424,12 @@ async function hideBanner() {
   updateBannerVisibility();
 }
 
-// Get and cache favicon
-async function getFaviconUrl(url) {
+// Get favicon URL without caching
+function getFaviconUrl(url) {
   try {
     const urlObj = new URL(url);
     const domain = urlObj.hostname;
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-    
-    const cacheKey = `favicon_${domain}`;
-    const cached = await browser.storage.local.get([cacheKey]);
-    
-    if (cached[cacheKey]) {
-      return cached[cacheKey];
-    }
-    
-    try {
-      const response = await fetch(faviconUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      return new Promise((resolve) => {
-        reader.onloadend = async () => {
-          const base64data = reader.result;
-          await browser.storage.local.set({ [cacheKey]: base64data });
-          resolve(base64data);
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (fetchError) {
-      console.log('Could not cache favicon:', fetchError);
-      return faviconUrl;
-    }
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
   } catch (e) {
     return null;
   }
@@ -377,7 +439,7 @@ function setupEventListeners() {
   document.querySelectorAll('.engine-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       currentEngine = btn.dataset.engine;
-      browser.storage.local.set({ currentEngine });
+      chrome.storage.local.set({ currentEngine });
       updateActiveEngine();
     });
   });
@@ -396,7 +458,7 @@ function setupEventListeners() {
   });
 
   document.getElementById('settingsBtn').addEventListener('click', () => {
-    browser.runtime.openOptionsPage();
+    chrome.runtime.openOptionsPage();
   });
 
   const bannerClose = document.getElementById('bannerClose');
@@ -405,6 +467,21 @@ function setupEventListeners() {
       e.preventDefault();
       e.stopPropagation();
       hideBanner();
+    });
+  }
+
+  // Weather click to toggle temperature unit
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (weatherDisplay) {
+    weatherDisplay.addEventListener('click', async () => {
+      if (!isOnline || !weatherDisplay.dataset.tempC) return;
+      
+      settings.tempUnit = settings.tempUnit === 'celsius' ? 'fahrenheit' : 'celsius';
+      await saveSettings();
+      
+      const tempC = parseInt(weatherDisplay.dataset.tempC);
+      const weatherText = weatherDisplay.textContent.split(' ')[0];
+      updateWeatherDisplay(weatherText, tempC);
     });
   }
 }
@@ -428,12 +505,11 @@ async function renderShortcuts() {
 
   const maxSlots = 14;
   
-  const shortcutPromises = shortcuts.map(async (shortcut, index) => {
-    return await createShortcutCard(shortcut, index);
-  });
-  
-  const shortcutCards = await Promise.all(shortcutPromises);
-  shortcutCards.forEach(card => grid.appendChild(card));
+  // Render all shortcuts
+  for (let i = 0; i < shortcuts.length; i++) {
+    const card = createShortcutCard(shortcuts[i], i);
+    grid.appendChild(card);
+  }
 
   for (let i = shortcuts.length; i < maxSlots; i++) {
     const addCard = createAddButton();
@@ -443,12 +519,12 @@ async function renderShortcuts() {
   applyBlurSettings();
 }
 
-async function createShortcutCard(shortcut, index) {
+function createShortcutCard(shortcut, index) {
   const card = document.createElement('a');
   card.className = 'shortcut-card';
   card.href = shortcut.url;
   
-  const faviconUrl = await getFaviconUrl(shortcut.url);
+  const faviconUrl = getFaviconUrl(shortcut.url);
   const iconHtml = faviconUrl 
     ? `<img src="${faviconUrl}" class="shortcut-favicon" alt="${escapeHtml(shortcut.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
        <div class="shortcut-icon nf nf-md-link_variant" style="display: none;"></div>`
@@ -514,7 +590,6 @@ function showAddShortcutModal() {
     if (title && url && isValidUrl(url)) {
       shortcuts.push({ title, url });
       await saveShortcuts();
-      await getFaviconUrl(url);
       renderShortcuts();
       modal.remove();
     } else {
