@@ -11,7 +11,7 @@ let versionClickCount = 0;
 let tetoModeUnlocked = false;
 
 const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/manifest.json';
-const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-firefox.zip';
+const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-chrome.zip';
 
 document.addEventListener('DOMContentLoaded', async () => {
   await window.MikuStorage.init();
@@ -37,8 +37,7 @@ async function saveSettings() {
 
 async function loadVersion() {
   try {
-    // Firefox uses browser.runtime instead of chrome.runtime
-    const response = await fetch(browser.runtime.getURL('manifest.json'));
+    const response = await fetch(chrome.runtime.getURL('manifest.json'));
     const manifest = await response.json();
     document.getElementById('versionNumber').textContent = manifest.version;
   } catch (error) {
@@ -48,8 +47,7 @@ async function loadVersion() {
 
 async function checkForUpdates() {
   try {
-    // Firefox uses browser.runtime instead of chrome.runtime
-    const localManifest = await fetch(browser.runtime.getURL('manifest.json')).then(r => r.json());
+    const localManifest = await fetch(chrome.runtime.getURL('manifest.json')).then(r => r.json());
     const remoteManifest = await fetch(REPO_MANIFEST_URL).then(r => r.json());
     
     if (localManifest.version !== remoteManifest.version) {
@@ -107,21 +105,19 @@ Extract the downloaded ZIP file to a folder on your computer.
 
 ## Step 3: Update Extension
 
-### For Firefox:
-1. Go to \`about:addons\`
-2. Remove the old Miku Theme
-3. Go to \`about:debugging#/runtime/this-firefox\`
-4. Click "Load Temporary Add-on"
-5. Select manifest.json from the extracted folder
-
-**Note:** Temporary add-ons in Firefox are removed when you close the browser. For a permanent installation, you can package the extension as an XPI file or install it from addons.mozilla.org if available.
-
 ### For Chrome/Edge/Brave:
 1. Go to \`chrome://extensions\`
 2. Find "Miku Theme - MalikHw"
 3. Click "Remove" to uninstall the old version
 4. Click "Load unpacked"
 5. Select the newly extracted folder
+
+### For Firefox:
+1. Go to \`about:addons\`
+2. Remove the old Miku Theme
+3. Go to \`about:debugging#/runtime/this-firefox\`
+4. Click "Load Temporary Add-on"
+5. Select manifest.json from the extracted folder
 
 ## ⚠️ Your settings will be preserved!
 Your shortcuts, wallpaper, and preferences are stored separately and won't be lost.
