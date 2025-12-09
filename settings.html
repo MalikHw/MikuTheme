@@ -86,7 +86,7 @@
         <div class="setting-item">
           <div class="setting-info">
             <label>Image Cache</label>
-            <p class="setting-description">Clear cached background images to load new random images</p>
+            <p class="setting-description">Clear cached background images to load new random images (now using IndexedDB for unlimited* storage!)</p>
           </div>
           <button class="btn danger" id="clearCacheBtn">
             <span class="nf nf-md-delete"></span> Clear Cache
@@ -175,6 +175,8 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- IMPORTANT: Load IndexedDB module first! -->
+  <script src="storage-db.js"></script>
   <script src="settings-script.js"></script>
 </body>
 </html>
