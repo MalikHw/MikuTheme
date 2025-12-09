@@ -1,3 +1,5 @@
+// script.js - Main script using IndexedDB (Firefox compatible)
+
 // Search Engines Configuration
 const searchEngines = {
   google: 'https://www.google.com/search?q=',
@@ -42,6 +44,7 @@ let isOnline = navigator.onLine;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  await window.MikuStorage.init();
   await loadSettings();
   await loadShortcuts();
   
@@ -76,32 +79,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Load Settings
 async function loadSettings() {
-  const result = await chrome.storage.local.get(['settings', 'currentEngine']);
-  if (result.settings) {
-    settings = { ...settings, ...result.settings };
+  const savedSettings = await window.MikuStorage.getSettings();
+  if (savedSettings && Object.keys(savedSettings).length > 0) {
+    settings = { ...settings, ...savedSettings };
   }
-  if (result.currentEngine) {
-    currentEngine = result.currentEngine;
+  
+  const savedEngine = await window.MikuStorage.getOtherData('currentEngine');
+  if (savedEngine) {
+    currentEngine = savedEngine;
     updateActiveEngine();
   }
 }
 
 // Save Settings
 async function saveSettings() {
-  await chrome.storage.local.set({ settings });
+  await window.MikuStorage.saveSettings(settings);
 }
 
 // Load Shortcuts
 async function loadShortcuts() {
-  const result = await chrome.storage.local.get(['shortcuts']);
-  if (result.shortcuts) {
-    shortcuts = result.shortcuts;
+  const savedShortcuts = await window.MikuStorage.getShortcuts();
+  if (savedShortcuts && savedShortcuts.length > 0) {
+    shortcuts = savedShortcuts;
   }
 }
 
 // Save Shortcuts
 async function saveShortcuts() {
-  await chrome.storage.local.set({ shortcuts });
+  await window.MikuStorage.saveShortcuts(shortcuts);
 }
 
 // Weather Functions
@@ -115,14 +120,12 @@ async function loadWeather() {
   }
 
   try {
-    // Get user's location
     const position = await new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
     });
 
     const { latitude, longitude } = position.coords;
 
-    // Fetch weather from Open-Meteo API
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=celsius&windspeed_unit=kmh`,
       { signal: AbortSignal.timeout(5000) }
@@ -133,10 +136,7 @@ async function loadWeather() {
     const weatherCode = data.current.weathercode;
     const windSpeed = data.current.windspeed_10m;
 
-    // Store celsius temp for conversion
     weatherDisplay.dataset.tempC = tempC;
-
-    // Determine weather condition from WMO code
     const weatherCondition = getWeatherCondition(weatherCode, windSpeed);
 
     updateWeatherDisplay(weatherCondition, tempC);
@@ -177,7 +177,6 @@ function celsiusToFahrenheit(c) {
 }
 
 function getWeatherCondition(code, windSpeed) {
-  // WMO Weather interpretation codes
   if (code === 0) return 'Clear';
   if (code === 1 || code === 2) return 'Sunny';
   if (code === 3) return 'Cloudy';
@@ -188,32 +187,24 @@ function getWeatherCondition(code, windSpeed) {
   if (code >= 80 && code <= 82) return 'Rainy';
   if (code >= 85 && code <= 86) return 'Snowy';
   if (code >= 95 && code <= 99) return 'Stormy';
-  
-  // Check wind speed for "Windy" condition
   if (windSpeed > 30) return 'Windy';
-  
   return 'Sunny';
 }
 
-// Load Random Image from Repo with Caching and Offline Support
+// Load Random Image from Repo with IndexedDB Caching
 async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
-  // If custom background is set, use it
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
     applyBackgroundDisplayMode(bgLayer);
     return;
   }
 
-  // Apply fallback gradient immediately
   applyFallbackGradient(bgLayer);
 
-  const cacheKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
-
-  // If offline, load from cache only
   if (!isOnline) {
-    await loadRandomCachedImage(cacheKey, bgLayer);
+    await loadRandomCachedImage(bgLayer);
     return;
   }
 
@@ -227,7 +218,7 @@ async function loadRandomImage() {
     
     if (isNaN(imageCount) || imageCount <= 0) {
       console.error('Invalid image count:', text);
-      await loadRandomCachedImage(cacheKey, bgLayer);
+      await loadRandomCachedImage(bgLayer);
       return;
     }
     
@@ -263,24 +254,22 @@ async function loadRandomImage() {
     fileReader.onloadend = async () => {
       const base64data = fileReader.result;
       
-      // Add to all cached images array
-      const allCached = await chrome.storage.local.get([cacheKey]);
-      let cachedArray = allCached[cacheKey] || [];
+      // Get cached images from IndexedDB
+      let cachedArray = await window.MikuStorage.getCachedImages(settings.tetoMode);
       
       // Check if this image is already cached
       const exists = cachedArray.some(img => img.url === imageUrl);
       if (!exists) {
-        // Delete oldest 15 images (or 7 for teto) if cache is getting large
         const deleteThreshold = settings.tetoMode ? 7 : 15;
         
         if (cachedArray.length >= deleteThreshold) {
-          // Sort by size and remove largest images
-          cachedArray.sort((a, b) => (b.size || 0) - (a.size || 0));
-          cachedArray = cachedArray.slice(deleteThreshold);
+          // Sort by size and keep smallest images
+          cachedArray.sort((a, b) => (a.size || 0) - (b.size || 0));
+          cachedArray = cachedArray.slice(0, deleteThreshold - 1);
         }
         
         cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length });
-        await chrome.storage.local.set({ [cacheKey]: cachedArray });
+        await window.MikuStorage.saveCachedImages(cachedArray, settings.tetoMode);
       }
       
       bgLayer.style.backgroundImage = `url(${base64data})`;
@@ -293,15 +282,14 @@ async function loadRandomImage() {
   } catch (error) {
     console.error('Error loading random image (offline?):', error);
     hideLoadingIndicator();
-    await loadRandomCachedImage(cacheKey, bgLayer);
+    await loadRandomCachedImage(bgLayer);
   }
 }
 
 // Load random cached image when offline
-async function loadRandomCachedImage(cacheKey, bgLayer) {
+async function loadRandomCachedImage(bgLayer) {
   try {
-    const cached = await chrome.storage.local.get([cacheKey]);
-    const cachedArray = cached[cacheKey] || [];
+    const cachedArray = await window.MikuStorage.getCachedImages(settings.tetoMode);
     
     if (cachedArray.length > 0) {
       const randomIndex = Math.floor(Math.random() * cachedArray.length);
@@ -424,7 +412,6 @@ async function hideBanner() {
   updateBannerVisibility();
 }
 
-// Get favicon URL without caching
 function getFaviconUrl(url) {
   try {
     const urlObj = new URL(url);
@@ -437,9 +424,9 @@ function getFaviconUrl(url) {
 
 function setupEventListeners() {
   document.querySelectorAll('.engine-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       currentEngine = btn.dataset.engine;
-      chrome.storage.local.set({ currentEngine });
+      await window.MikuStorage.saveOtherData('currentEngine', currentEngine);
       updateActiveEngine();
     });
   });
@@ -458,7 +445,8 @@ function setupEventListeners() {
   });
 
   document.getElementById('settingsBtn').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+    // Firefox uses browser.runtime instead of chrome.runtime
+    browser.runtime.openOptionsPage();
   });
 
   const bannerClose = document.getElementById('bannerClose');
@@ -470,7 +458,6 @@ function setupEventListeners() {
     });
   }
 
-  // Weather click to toggle temperature unit
   const weatherDisplay = document.getElementById('weatherDisplay');
   if (weatherDisplay) {
     weatherDisplay.addEventListener('click', async () => {
@@ -505,7 +492,6 @@ async function renderShortcuts() {
 
   const maxSlots = 14;
   
-  // Render all shortcuts
   for (let i = 0; i < shortcuts.length; i++) {
     const card = createShortcutCard(shortcuts[i], i);
     grid.appendChild(card);
