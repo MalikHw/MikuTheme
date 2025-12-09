@@ -12,6 +12,40 @@ body {
   position: relative;
 }
 
+/* Weather Display */
+.weather-display {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  font-size: 1rem;
+  color: #3c4043;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.weather-display.blur {
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.weather-display > span:first-child {
+  font-size: 1.5rem;
+  color: #68c3ff;
+}
+
+body.teto-mode .weather-display > span:first-child {
+  color: #ff6b6b;
+}
+
+body.custom-color .weather-display > span:first-child {
+  color: var(--custom-primary);
+}
+
 /* Teto Mode Color Overrides */
 body.teto-mode .search-engine-selector {
   background: rgba(255, 255, 255, 0.85);
@@ -153,7 +187,8 @@ body.teto-mode .loader-percentage {
 .search-bar-wrapper.blur,
 .shortcut-card.blur,
 .settings-btn.blur,
-.kofi-banner.blur {
+.kofi-banner.blur,
+.weather-display.blur {
   backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.7);
 }
