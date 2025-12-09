@@ -1,4 +1,4 @@
-// script.js - Main script using IndexedDB
+// script.js - Main script using IndexedDB (Firefox compatible)
 
 // Search Engines Configuration
 const searchEngines = {
@@ -445,7 +445,8 @@ function setupEventListeners() {
   });
 
   document.getElementById('settingsBtn').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+    // Firefox uses browser.runtime instead of chrome.runtime
+    browser.runtime.openOptionsPage();
   });
 
   const bannerClose = document.getElementById('bannerClose');
