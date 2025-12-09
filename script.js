@@ -28,7 +28,7 @@ const DEFAULT_SHORTCUTS = [
 let currentEngine = 'google';
 let shortcuts = [];
 let settings = { 
-  blurEnabled: true, // Changed to true by default
+  blurEnabled: true,
   wallpaperBlur: false, 
   customBg: null, 
   bannerHidden: false, 
@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateBannerVisibility();
   
   loadRandomImage();
+  loadWeather();
   
   setupEventListeners();
   renderShortcuts();
@@ -90,16 +91,67 @@ async function saveShortcuts() {
   await chrome.storage.local.set({ shortcuts });
 }
 
+// Weather Functions
+async function loadWeather() {
+  const weatherDisplay = document.getElementById('weatherDisplay');
+  if (!weatherDisplay) return;
+
+  try {
+    // Get user's location
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
+
+    const { latitude, longitude } = position.coords;
+
+    // Fetch weather from Open-Meteo API
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=celsius&windspeed_unit=kmh`
+    );
+    const data = await response.json();
+
+    const temp = Math.round(data.current.temperature_2m);
+    const weatherCode = data.current.weathercode;
+    const windSpeed = data.current.windspeed_10m;
+
+    // Determine weather condition from WMO code
+    const weatherCondition = getWeatherCondition(weatherCode, windSpeed);
+
+    weatherDisplay.textContent = `${weatherCondition} ${temp}°C`;
+    weatherDisplay.style.display = 'flex';
+  } catch (error) {
+    console.log('Could not load weather:', error);
+    weatherDisplay.style.display = 'none';
+  }
+}
+
+function getWeatherCondition(code, windSpeed) {
+  // WMO Weather interpretation codes
+  if (code === 0) return 'Clear';
+  if (code === 1 || code === 2) return 'Sunny';
+  if (code === 3) return 'Cloudy';
+  if (code === 45 || code === 48) return 'Foggy';
+  if (code >= 51 && code <= 55) return 'Drizzly';
+  if (code >= 61 && code <= 65) return 'Rainy';
+  if (code >= 71 && code <= 77) return 'Snowy';
+  if (code >= 80 && code <= 82) return 'Rainy';
+  if (code >= 85 && code <= 86) return 'Snowy';
+  if (code >= 95 && code <= 99) return 'Stormy';
+  
+  // Check wind speed for "Windy" condition
+  if (windSpeed > 30) return 'Windy';
+  
+  return 'Sunny';
+}
+
 // Load Random Image from Repo with Caching and Offline Support
 async function loadRandomImage() {
   const bgLayer = document.querySelector('.background-layer');
   
-  // Apply display mode
-  applyBackgroundDisplayMode(bgLayer);
-  
   // If custom background is set, use it
   if (settings.customBg) {
     bgLayer.style.backgroundImage = `url(${settings.customBg})`;
+    applyBackgroundDisplayMode(bgLayer);
     return;
   }
 
@@ -130,6 +182,7 @@ async function loadRandomImage() {
     
     if (cached[cacheKey] && cached[cacheUrlKey] === imageUrl) {
       bgLayer.style.backgroundImage = `url(${cached[cacheKey]})`;
+      applyBackgroundDisplayMode(bgLayer);
       return;
     }
     
@@ -179,7 +232,6 @@ async function loadRandomImage() {
         
         // If we've reached max cache size, remove the largest one
         if (cachedArray.length >= maxCacheSize) {
-          // Find the largest cached image by data size
           let largestIndex = 0;
           let largestSize = cachedArray[0]?.data?.length || 0;
           
@@ -191,16 +243,15 @@ async function loadRandomImage() {
             }
           }
           
-          // Remove the largest image
           cachedArray.splice(largestIndex, 1);
         }
         
-        // Add the new image
         cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length });
         await chrome.storage.local.set({ [allCachedKey]: cachedArray });
       }
       
       bgLayer.style.backgroundImage = `url(${base64data})`;
+      applyBackgroundDisplayMode(bgLayer);
       hideLoadingIndicator();
     };
     
@@ -209,7 +260,6 @@ async function loadRandomImage() {
   } catch (error) {
     console.error('Error loading random image (offline?):', error);
     hideLoadingIndicator();
-    // Try to load a random cached image
     const allCachedKey = settings.tetoMode ? 'allCachedTetoImages' : 'allCachedImages';
     await loadRandomCachedImage(allCachedKey, bgLayer);
   }
@@ -225,6 +275,7 @@ async function loadRandomCachedImage(cacheKey, bgLayer) {
       const randomIndex = Math.floor(Math.random() * cachedArray.length);
       const randomCached = cachedArray[randomIndex];
       bgLayer.style.backgroundImage = `url(${randomCached.data})`;
+      applyBackgroundDisplayMode(bgLayer);
       console.log('Loaded cached image (offline mode)');
     } else {
       console.log('No cached images available, using gradient');
@@ -237,17 +288,17 @@ async function loadRandomCachedImage(cacheKey, bgLayer) {
 // Apply Background Display Mode
 function applyBackgroundDisplayMode(bgLayer) {
   const modes = {
-    cover: { size: 'cover', position: 'center' },
-    contain: { size: 'contain', position: 'center' },
-    fill: { size: '100% 100%', position: 'center' },
-    stretch: { size: '100% 100%', position: 'center' },
+    cover: { size: 'cover', position: 'center', repeat: 'no-repeat' },
+    contain: { size: 'contain', position: 'center', repeat: 'no-repeat' },
+    fill: { size: '100% 100%', position: 'center', repeat: 'no-repeat' },
+    stretch: { size: '100% 100%', position: 'center', repeat: 'no-repeat' },
     tile: { size: 'auto', position: 'top left', repeat: 'repeat' }
   };
   
   const mode = modes[settings.bgDisplayMode] || modes.cover;
   bgLayer.style.backgroundSize = mode.size;
   bgLayer.style.backgroundPosition = mode.position;
-  bgLayer.style.backgroundRepeat = mode.repeat || 'no-repeat';
+  bgLayer.style.backgroundRepeat = mode.repeat;
 }
 
 function showLoadingIndicator() {
@@ -317,7 +368,7 @@ function adjustColorBrightness(hex, percent) {
 
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
-  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner');
+  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .weather-display');
   
   if (settings.blurEnabled) {
     blurElements.forEach(el => el.classList.add('blur'));
@@ -341,40 +392,12 @@ async function hideBanner() {
   updateBannerVisibility();
 }
 
-// Get and cache favicon
-async function getFaviconUrl(url) {
+// Get favicon URL without caching
+function getFaviconUrl(url) {
   try {
     const urlObj = new URL(url);
     const domain = urlObj.hostname;
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-    
-    // Check if favicon is cached
-    const cacheKey = `favicon_${domain}`;
-    const cached = await chrome.storage.local.get([cacheKey]);
-    
-    if (cached[cacheKey]) {
-      return cached[cacheKey];
-    }
-    
-    // Try to fetch and cache the favicon
-    try {
-      const response = await fetch(faviconUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      return new Promise((resolve) => {
-        reader.onloadend = async () => {
-          const base64data = reader.result;
-          // Cache the favicon
-          await chrome.storage.local.set({ [cacheKey]: base64data });
-          resolve(base64data);
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (fetchError) {
-      console.log('Could not cache favicon:', fetchError);
-      return faviconUrl;
-    }
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
   } catch (e) {
     return null;
   }
@@ -435,13 +458,11 @@ async function renderShortcuts() {
 
   const maxSlots = 14;
   
-  // Use Promise.all to render all shortcuts with their favicons
-  const shortcutPromises = shortcuts.map(async (shortcut, index) => {
-    return await createShortcutCard(shortcut, index);
-  });
-  
-  const shortcutCards = await Promise.all(shortcutPromises);
-  shortcutCards.forEach(card => grid.appendChild(card));
+  // Render all shortcuts
+  for (let i = 0; i < shortcuts.length; i++) {
+    const card = createShortcutCard(shortcuts[i], i);
+    grid.appendChild(card);
+  }
 
   for (let i = shortcuts.length; i < maxSlots; i++) {
     const addCard = createAddButton();
@@ -451,12 +472,12 @@ async function renderShortcuts() {
   applyBlurSettings();
 }
 
-async function createShortcutCard(shortcut, index) {
+function createShortcutCard(shortcut, index) {
   const card = document.createElement('a');
   card.className = 'shortcut-card';
   card.href = shortcut.url;
   
-  const faviconUrl = await getFaviconUrl(shortcut.url);
+  const faviconUrl = getFaviconUrl(shortcut.url);
   const iconHtml = faviconUrl 
     ? `<img src="${faviconUrl}" class="shortcut-favicon" alt="${escapeHtml(shortcut.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
        <div class="shortcut-icon nf nf-md-link_variant" style="display: none;"></div>`
@@ -522,10 +543,6 @@ function showAddShortcutModal() {
     if (title && url && isValidUrl(url)) {
       shortcuts.push({ title, url });
       await saveShortcuts();
-      
-      // Pre-cache the favicon
-      await getFaviconUrl(url);
-      
       renderShortcuts();
       modal.remove();
     } else {
