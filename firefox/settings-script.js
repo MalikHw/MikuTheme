@@ -14,6 +14,7 @@ const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/m
 const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-firefox.zip';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await window.MikuStorage.init();
   await loadSettings();
   await loadVersion();
   await checkTetoModeUnlocked();
@@ -23,14 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSettings() {
-  const result = await browser.storage.local.get(['settings']);
-  if (result.settings) {
-    settings = { ...settings, ...result.settings };
+  const savedSettings = await window.MikuStorage.getSettings();
+  if (savedSettings && Object.keys(savedSettings).length > 0) {
+    settings = { ...settings, ...savedSettings };
   }
 }
 
 async function saveSettings() {
-  await browser.storage.local.set({ settings });
+  await window.MikuStorage.saveSettings(settings);
   showToast('Settings saved!');
 }
 
@@ -46,6 +47,7 @@ async function loadVersion() {
 
 async function checkForUpdates() {
   try {
+    // Firefox uses browser.runtime instead of chrome.runtime
     const localManifest = await fetch(browser.runtime.getURL('manifest.json')).then(r => r.json());
     const remoteManifest = await fetch(REPO_MANIFEST_URL).then(r => r.json());
     
@@ -111,6 +113,15 @@ Extract the downloaded ZIP file to a folder on your computer.
 4. Click "Load Temporary Add-on"
 5. Select manifest.json from the extracted folder
 
+**Note:** Temporary add-ons in Firefox are removed when you close the browser. For a permanent installation, you can package the extension as an XPI file or install it from addons.mozilla.org if available.
+
+### For Chrome/Edge/Brave:
+1. Go to \`chrome://extensions\`
+2. Find "Miku Theme - MalikHw"
+3. Click "Remove" to uninstall the old version
+4. Click "Load unpacked"
+5. Select the newly extracted folder
+
 ## ⚠️ Your settings will be preserved!
 Your shortcuts, wallpaper, and preferences are stored separately and won't be lost.
 
@@ -163,8 +174,8 @@ function showUpdateModal(markdownContent, version) {
 }
 
 async function checkTetoModeUnlocked() {
-  const result = await browser.storage.local.get(['tetoModeUnlocked']);
-  if (result.tetoModeUnlocked) {
+  const unlocked = await window.MikuStorage.getOtherData('tetoModeUnlocked');
+  if (unlocked) {
     tetoModeUnlocked = true;
     showTetoMode();
   }
@@ -172,7 +183,7 @@ async function checkTetoModeUnlocked() {
 
 async function unlockTetoMode() {
   tetoModeUnlocked = true;
-  await browser.storage.local.set({ tetoModeUnlocked: true });
+  await window.MikuStorage.saveOtherData('tetoModeUnlocked', true);
   showToast('🔴 Teto Mode Unlocked! Refreshing...', false);
   setTimeout(() => location.reload(), 1000);
 }
@@ -185,7 +196,7 @@ function showTetoMode() {
 
 async function clearImageCache() {
   try {
-    await browser.storage.local.remove(['cachedImage', 'cachedTetoImage', 'cachedImageUrl', 'cachedTetoImageUrl', 'allCachedImages', 'allCachedTetoImages']);
+    await window.MikuStorage.clearAllImageCaches();
     showToast('Image cache cleared! Refresh the new tab page to load a new image.');
   } catch (error) {
     showToast('Failed to clear cache', true);
