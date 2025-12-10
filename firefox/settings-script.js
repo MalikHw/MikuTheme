@@ -10,7 +10,7 @@ let settings = {
 let versionClickCount = 0;
 let tetoModeUnlocked = false;
 
-const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/manifest.json';
+const REPO_MANIFEST_URL = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/firefox/manifest.json';
 const LATEST_RELEASE_URL = 'https://github.com/MalikHw/MikuTheme/releases/latest/download/miku-theme-firefox.zip';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -37,8 +37,8 @@ async function saveSettings() {
 
 async function loadVersion() {
   try {
-    const response = await fetch(browser.runtime.getURL('manifest.json'));
-    const manifest = await response.json();
+    // Manifest V3 compatible - works for both Firefox and Chrome
+    const manifest = browser.runtime.getManifest();
     document.getElementById('versionNumber').textContent = manifest.version;
   } catch (error) {
     document.getElementById('versionNumber').textContent = 'Unknown';
@@ -47,8 +47,8 @@ async function loadVersion() {
 
 async function checkForUpdates() {
   try {
-    // Firefox uses browser.runtime instead of chrome.runtime
-    const localManifest = await fetch(browser.runtime.getURL('manifest.json')).then(r => r.json());
+    // Manifest V3 compatible
+    const localManifest = browser.runtime.getManifest();
     const remoteManifest = await fetch(REPO_MANIFEST_URL).then(r => r.json());
     
     if (localManifest.version !== remoteManifest.version) {
