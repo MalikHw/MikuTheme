@@ -1,6 +1,3 @@
-// script.js - Main script using IndexedDB
-
-// Search Engines Configuration
 const searchEngines = {
   google: 'https://www.google.com/search?q=',
   bing: 'https://www.bing.com/search?q=',
@@ -212,7 +209,12 @@ async function loadRandomImage() {
     const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
     const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
     
-    const response = await fetch(countFile, { signal: AbortSignal.timeout(5000) });
+    // Add cache-busting parameters to force fresh fetch every time
+    const cacheBuster = `?t=${Date.now()}`;
+    const response = await fetch(countFile + cacheBuster, { 
+      signal: AbortSignal.timeout(5000),
+      cache: 'no-store' // Explicitly disable cache
+    });
     const text = await response.text();
     const imageCount = parseInt(text.trim());
     
