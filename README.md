@@ -6,6 +6,8 @@
 ![(click the about section 5 times to unlock teto)](screenshot3.png)
 
 how to install:
+### MS EDGE: [just go here bub](https://microsoftedge.microsoft.com/addons/detail/mikutab/gjjkbbpbncpclmlffdckbahgibbnhdaa)
+### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
 - download the zip files of chrome/firefox
 - (FIREFOX IS UNTESTED)
