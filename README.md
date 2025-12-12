@@ -7,6 +7,7 @@
 
 how to install:
 ### MS EDGE: [just go here bub](https://microsoftedge.microsoft.com/addons/detail/mikutab/gjjkbbpbncpclmlffdckbahgibbnhdaa)
+### FIREFOX: [[HYPERLINK BLOCKED]](https://addons.mozilla.org/en-US/android/addon/mikutab/)
 ### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
 - download the zip files of chrome/firefox
