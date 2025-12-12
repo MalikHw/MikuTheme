@@ -10,8 +10,7 @@ how to install:
 ### FIREFOX: [[HYPERLINK BLOCKED]](https://addons.mozilla.org/en-US/android/addon/mikutab/)
 ### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
-- download the zip files of chrome/firefox
-- (FIREFOX IS UNTESTED)
+- download the zip file of chrome
 - drag the zip to the extensions Options
 
 ## This shi got:
