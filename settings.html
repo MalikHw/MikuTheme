@@ -49,6 +49,17 @@
             <span class="toggle-slider teto"></span>
           </label>
         </div>
+        <!-- Teto x Miku Toggle (hidden by default) -->
+        <div class="setting-item" id="tetoMikuModeContainer" style="display: none;">
+          <div class="setting-info">
+            <label for="tetoMikuModeToggle">💙❤️ Teto x Miku Mixed Mode</label>
+            <p class="setting-description">Randomly mix wallpapers from both Miku and Teto folders (requires Teto Mode enabled)</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tetoMikuModeToggle">
+            <span class="toggle-slider mixed"></span>
+          </label>
+        </div>
       </section>
 
       <!-- Background Section -->
@@ -86,10 +97,19 @@
         <div class="setting-item">
           <div class="setting-info">
             <label>Image Cache</label>
-            <p class="setting-description">Clear cached background images to load new random images (now using IndexedDB for unlimited* storage!)</p>
+            <p class="setting-description">Clear cached background images to load new random images (using IndexedDB for unlimited* storage!)</p>
           </div>
           <button class="btn danger" id="clearCacheBtn">
             <span class="nf nf-md-delete"></span> Clear Cache
+          </button>
+        </div>
+        <div class="setting-item">
+          <div class="setting-info">
+            <label>Favicon Cache</label>
+            <p class="setting-description">Clear cached favicons for shortcuts</p>
+          </div>
+          <button class="btn danger" id="clearFaviconBtn">
+            <span class="nf nf-md-delete"></span> Clear Favicon Cache
           </button>
         </div>
       </section>
@@ -100,17 +120,17 @@
         <div class="setting-item">
           <div class="setting-info">
             <label for="customColorToggle">Enable Custom Color</label>
-            <p class="setting-description">Use custom colors (only available with custom wallpaper)</p>
+            <p class="setting-description">Use custom colors for the UI (Material Design color variations)</p>
           </div>
           <label class="toggle">
             <input type="checkbox" id="customColorToggle">
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <div class="setting-item" id="customColorContainer" style="display: none;">
+        <div class="setting-item" id="customColorContainer">
           <div class="setting-info">
             <label for="customColorPicker">Primary Color</label>
-            <p class="setting-description">Choose your primary theme color</p>
+            <p class="setting-description">Choose your primary theme color (lighter/darker shades generated automatically)</p>
           </div>
           <input type="color" id="customColorPicker" class="color-picker" value="#68c3ff">
         </div>
