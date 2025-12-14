@@ -3,6 +3,7 @@ let settings = {
   wallpaperBlur: false, 
   customBg: null, 
   tetoMode: false,
+  tetoMikuMode: false,
   bgDisplayMode: 'cover',
   customColorEnabled: false,
   customColor: '#68c3ff'
@@ -95,37 +96,7 @@ async function showUpdateInstructions(newVersion) {
     
     showUpdateModal(instructions, newVersion);
   } catch (error) {
-    const fallbackInstructions = `# How to Update Miku Theme
-
-## Step 1: Download
-The download should start automatically. If not, click the download button again.
-
-## Step 2: Extract
-Extract the downloaded ZIP file to a folder on your computer.
-
-## Step 3: Update Extension
-
-### For Chrome/Edge/Brave:
-1. Go to \`chrome://extensions\`
-2. Find "Miku Theme - MalikHw"
-3. Click "Remove" to uninstall the old version
-4. Click "Load unpacked"
-5. Select the newly extracted folder
-
-### For Firefox:
-1. Go to \`about:addons\`
-2. Remove the old Miku Theme
-3. Go to \`about:debugging#/runtime/this-firefox\`
-4. Click "Load Temporary Add-on"
-5. Select manifest.json from the extracted folder
-
-## ⚠️ Your settings will be preserved!
-Your shortcuts, wallpaper, and preferences are stored separately and won't be lost.
-
----
-**New in v${newVersion}:** Check the release notes for details!`;
-    
-    showUpdateModal(fallbackInstructions, newVersion);
+    console.error('Failed to load update instructions:', error);
   }
 }
 
@@ -189,6 +160,10 @@ function showTetoMode() {
   const tetoContainer = document.getElementById('tetoModeContainer');
   tetoContainer.style.display = 'flex';
   tetoContainer.style.animation = 'slideDown 0.5s ease';
+  
+  const tetoMikuContainer = document.getElementById('tetoMikuModeContainer');
+  tetoMikuContainer.style.display = 'flex';
+  tetoMikuContainer.style.animation = 'slideDown 0.5s ease';
 }
 
 async function clearImageCache() {
@@ -197,6 +172,15 @@ async function clearImageCache() {
     showToast('Image cache cleared! Refresh the new tab page to load a new image.');
   } catch (error) {
     showToast('Failed to clear cache', true);
+  }
+}
+
+async function clearFaviconCache() {
+  try {
+    await window.MikuStorage.clearFaviconCache();
+    showToast('Favicon cache cleared!');
+  } catch (error) {
+    showToast('Failed to clear favicon cache', true);
   }
 }
 
@@ -216,8 +200,22 @@ function setupEventListeners() {
   const tetoModeToggle = document.getElementById('tetoModeToggle');
   tetoModeToggle.addEventListener('change', async () => {
     settings.tetoMode = tetoModeToggle.checked;
+    
+    // If turning off Teto mode, also turn off mixed mode
+    if (!settings.tetoMode) {
+      settings.tetoMikuMode = false;
+      document.getElementById('tetoMikuModeToggle').checked = false;
+    }
+    
     await saveSettings();
     applyTetoMode();
+    updateTetoMikuToggleState();
+  });
+
+  const tetoMikuModeToggle = document.getElementById('tetoMikuModeToggle');
+  tetoMikuModeToggle.addEventListener('change', async () => {
+    settings.tetoMikuMode = tetoMikuModeToggle.checked;
+    await saveSettings();
   });
 
   const bgDisplaySelect = document.getElementById('bgDisplayMode');
@@ -231,7 +229,6 @@ function setupEventListeners() {
   customColorToggle.addEventListener('change', async () => {
     settings.customColorEnabled = customColorToggle.checked;
     await saveSettings();
-    updateCustomColorUI();
     applyCustomColor();
   });
 
@@ -254,6 +251,11 @@ function setupEventListeners() {
   const clearCacheBtn = document.getElementById('clearCacheBtn');
   clearCacheBtn.addEventListener('click', clearImageCache);
 
+  const clearFaviconBtn = document.getElementById('clearFaviconBtn');
+  if (clearFaviconBtn) {
+    clearFaviconBtn.addEventListener('click', clearFaviconCache);
+  }
+
   const versionDisplay = document.getElementById('versionDisplay');
   versionDisplay.addEventListener('click', () => {
     if (tetoModeUnlocked) return;
@@ -269,16 +271,27 @@ function setupEventListeners() {
   });
 }
 
+function updateTetoMikuToggleState() {
+  const tetoMikuToggle = document.getElementById('tetoMikuModeToggle');
+  tetoMikuToggle.disabled = !settings.tetoMode;
+  
+  if (!settings.tetoMode) {
+    tetoMikuToggle.checked = false;
+    settings.tetoMikuMode = false;
+  }
+}
+
 function updateUI() {
   document.getElementById('blurToggle').checked = settings.blurEnabled;
   document.getElementById('wallpaperBlurToggle').checked = settings.wallpaperBlur;
   document.getElementById('tetoModeToggle').checked = settings.tetoMode;
+  document.getElementById('tetoMikuModeToggle').checked = settings.tetoMikuMode;
   document.getElementById('bgDisplayMode').value = settings.bgDisplayMode || 'cover';
   document.getElementById('customColorToggle').checked = settings.customColorEnabled;
   document.getElementById('customColorPicker').value = settings.customColor || '#68c3ff';
 
   updateBackgroundPreview();
-  updateCustomColorUI();
+  updateTetoMikuToggleState();
 
   if (settings.tetoMode) {
     applyTetoMode();
@@ -313,32 +326,19 @@ function updateBackgroundPreview() {
   }
 }
 
-function updateCustomColorUI() {
-  const colorPickerContainer = document.getElementById('customColorContainer');
-  const isEnabled = settings.customColorEnabled && settings.customBg;
-  
-  colorPickerContainer.style.display = isEnabled ? 'flex' : 'none';
-  
-  if (!settings.customBg) {
-    document.getElementById('customColorToggle').disabled = true;
-    document.getElementById('customColorToggle').checked = false;
-    settings.customColorEnabled = false;
-  } else {
-    document.getElementById('customColorToggle').disabled = false;
-  }
-}
-
 function applyTetoMode() {
   document.body.classList.toggle('teto-mode', settings.tetoMode);
 }
 
 function applyCustomColor() {
   const body = document.body;
-  if (settings.customColorEnabled && settings.customBg) {
+  if (settings.customColorEnabled) {
     body.classList.add('custom-color');
-    document.documentElement.style.setProperty('--custom-primary', settings.customColor);
-    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(settings.customColor, -20));
-    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(settings.customColor, 20));
+    const color = settings.customColor;
+    document.documentElement.style.setProperty('--custom-primary', color);
+    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(color, -20));
+    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(color, 20));
+    document.documentElement.style.setProperty('--custom-primary-lighter', adjustColorBrightness(color, 40));
   } else {
     body.classList.remove('custom-color');
   }
