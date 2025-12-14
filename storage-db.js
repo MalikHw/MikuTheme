@@ -1,10 +1,13 @@
 const DB_NAME = 'MikuThemeDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORES = {
   SETTINGS: 'settings',
   SHORTCUTS: 'shortcuts',
   IMAGES: 'images',
-  TETO_IMAGES: 'tetoImages'
+  TETO_IMAGES: 'tetoImages',
+  FAVORITES: 'favorites',
+  TETO_FAVORITES: 'tetoFavorites',
+  FAVICONS: 'favicons'
 };
 
 class MikuStorage {
@@ -37,6 +40,15 @@ class MikuStorage {
         }
         if (!db.objectStoreNames.contains(STORES.TETO_IMAGES)) {
           db.createObjectStore(STORES.TETO_IMAGES);
+        }
+        if (!db.objectStoreNames.contains(STORES.FAVORITES)) {
+          db.createObjectStore(STORES.FAVORITES);
+        }
+        if (!db.objectStoreNames.contains(STORES.TETO_FAVORITES)) {
+          db.createObjectStore(STORES.TETO_FAVORITES);
+        }
+        if (!db.objectStoreNames.contains(STORES.FAVICONS)) {
+          db.createObjectStore(STORES.FAVICONS);
         }
       };
     });
@@ -142,6 +154,35 @@ class MikuStorage {
   async clearAllImageCaches() {
     await this.clear(STORES.IMAGES);
     await this.clear(STORES.TETO_IMAGES);
+  }
+
+  // Favorites management
+  async getFavorites(isTeto = false) {
+    const storeName = isTeto ? STORES.TETO_FAVORITES : STORES.FAVORITES;
+    return await this.get(storeName, 'list') || [];
+  }
+
+  async saveFavorites(favorites, isTeto = false) {
+    const storeName = isTeto ? STORES.TETO_FAVORITES : STORES.FAVORITES;
+    return await this.set(storeName, 'list', favorites);
+  }
+
+  async clearFavorites(isTeto = false) {
+    const storeName = isTeto ? STORES.TETO_FAVORITES : STORES.FAVORITES;
+    return await this.delete(storeName, 'list');
+  }
+
+  // Favicon caching
+  async getCachedFavicon(url) {
+    return await this.get(STORES.FAVICONS, url);
+  }
+
+  async saveCachedFavicon(url, base64Data) {
+    return await this.set(STORES.FAVICONS, url, base64Data);
+  }
+
+  async clearFaviconCache() {
+    return await this.clear(STORES.FAVICONS);
   }
 
   async getOtherData(key) {
