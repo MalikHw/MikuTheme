@@ -3,7 +3,8 @@ const searchEngines = {
   bing: 'https://www.bing.com/search?q=',
   duckduckgo: 'https://duckduckgo.com/?q=',
   yandex: 'https://yandex.com/search/?text=',
-  brave: 'https://search.brave.com/search?q='
+  brave: 'https://search.brave.com/search?q=',
+  youtube: 'https://www.youtube.com/results?search_query='
 };
 
 const REPO_BASE = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main';
@@ -32,6 +33,7 @@ let settings = {
   customBg: null, 
   bannerHidden: false, 
   tetoMode: false,
+  tetoMikuMode: false,
   bgDisplayMode: 'cover',
   customColorEnabled: false,
   customColor: '#68c3ff',
@@ -206,14 +208,31 @@ async function loadRandomImage() {
   }
 
   try {
-    const countFile = settings.tetoMode ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
-    const imagesFolder = settings.tetoMode ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
+    // Determine which folder(s) to use
+    let countFile, imagesFolder, isTeto;
+    
+    if (settings.tetoMikuMode && settings.tetoMode) {
+      // Mixed mode: randomly choose between Miku and Teto
+      isTeto = Math.random() < 0.5;
+      countFile = isTeto ? TETO_IMAGES_COUNT_FILE : IMAGES_COUNT_FILE;
+      imagesFolder = isTeto ? TETO_IMAGES_FOLDER : IMAGES_FOLDER;
+    } else if (settings.tetoMode) {
+      // Teto only
+      countFile = TETO_IMAGES_COUNT_FILE;
+      imagesFolder = TETO_IMAGES_FOLDER;
+      isTeto = true;
+    } else {
+      // Miku only
+      countFile = IMAGES_COUNT_FILE;
+      imagesFolder = IMAGES_FOLDER;
+      isTeto = false;
+    }
     
     // Add cache-busting parameters to force fresh fetch every time
     const cacheBuster = `?t=${Date.now()}`;
     const response = await fetch(countFile + cacheBuster, { 
       signal: AbortSignal.timeout(5000),
-      cache: 'no-store' // Explicitly disable cache
+      cache: 'no-store'
     });
     const text = await response.text();
     const imageCount = parseInt(text.trim());
@@ -224,7 +243,18 @@ async function loadRandomImage() {
       return;
     }
     
-    const randomNum = Math.floor(Math.random() * imageCount) + 1;
+    // Get favorites list
+    const favorites = await window.MikuStorage.getFavorites(isTeto);
+    
+    // Weighted random selection (favorites have 3x chance)
+    let randomNum;
+    if (favorites.length > 0 && Math.random() < 0.6) {
+      // 60% chance to pick a favorite
+      randomNum = favorites[Math.floor(Math.random() * favorites.length)];
+    } else {
+      randomNum = Math.floor(Math.random() * imageCount) + 1;
+    }
+    
     const imageUrl = `${imagesFolder}/${randomNum}.png`;
     
     showLoadingIndicator();
@@ -257,12 +287,12 @@ async function loadRandomImage() {
       const base64data = fileReader.result;
       
       // Get cached images from IndexedDB
-      let cachedArray = await window.MikuStorage.getCachedImages(settings.tetoMode);
+      let cachedArray = await window.MikuStorage.getCachedImages(isTeto);
       
       // Check if this image is already cached
       const exists = cachedArray.some(img => img.url === imageUrl);
       if (!exists) {
-        const deleteThreshold = settings.tetoMode ? 7 : 15;
+        const deleteThreshold = isTeto ? 7 : 15;
         
         if (cachedArray.length >= deleteThreshold) {
           // Sort by size and keep smallest images
@@ -270,12 +300,16 @@ async function loadRandomImage() {
           cachedArray = cachedArray.slice(0, deleteThreshold - 1);
         }
         
-        cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length });
-        await window.MikuStorage.saveCachedImages(cachedArray, settings.tetoMode);
+        cachedArray.push({ url: imageUrl, data: base64data, size: base64data.length, num: randomNum });
+        await window.MikuStorage.saveCachedImages(cachedArray, isTeto);
       }
       
       bgLayer.style.backgroundImage = `url(${base64data})`;
       applyBackgroundDisplayMode(bgLayer);
+      
+      // Show star button if not custom wallpaper
+      showStarButton(randomNum, isTeto);
+      
       hideLoadingIndicator();
     };
     
@@ -291,19 +325,75 @@ async function loadRandomImage() {
 // Load random cached image when offline
 async function loadRandomCachedImage(bgLayer) {
   try {
-    const cachedArray = await window.MikuStorage.getCachedImages(settings.tetoMode);
+    const isTeto = settings.tetoMode && !settings.tetoMikuMode;
+    const cachedArray = await window.MikuStorage.getCachedImages(isTeto);
     
     if (cachedArray.length > 0) {
       const randomIndex = Math.floor(Math.random() * cachedArray.length);
       const randomCached = cachedArray[randomIndex];
       bgLayer.style.backgroundImage = `url(${randomCached.data})`;
       applyBackgroundDisplayMode(bgLayer);
+      
+      // Show star button
+      if (randomCached.num) {
+        showStarButton(randomCached.num, isTeto);
+      }
+      
       console.log('Loaded cached image (offline mode)');
     } else {
       console.log('No cached images available, using gradient');
     }
   } catch (error) {
     console.error('Error loading cached image:', error);
+  }
+}
+
+// Star button functionality
+function showStarButton(imageNum, isTeto) {
+  if (settings.customBg) return; // Don't show for custom wallpapers
+  
+  let starBtn = document.getElementById('starBtn');
+  if (!starBtn) {
+    starBtn = document.createElement('button');
+    starBtn.id = 'starBtn';
+    starBtn.className = 'star-btn';
+    document.body.appendChild(starBtn);
+    
+    starBtn.addEventListener('click', async () => {
+      const favorites = await window.MikuStorage.getFavorites(isTeto);
+      const index = favorites.indexOf(imageNum);
+      
+      if (index > -1) {
+        // Remove from favorites
+        favorites.splice(index, 1);
+        starBtn.classList.remove('active');
+      } else {
+        // Add to favorites
+        favorites.push(imageNum);
+        starBtn.classList.add('active');
+      }
+      
+      await window.MikuStorage.saveFavorites(favorites, isTeto);
+    });
+  }
+  
+  // Check if this image is a favorite
+  window.MikuStorage.getFavorites(isTeto).then(favorites => {
+    if (favorites.includes(imageNum)) {
+      starBtn.classList.add('active');
+    } else {
+      starBtn.classList.remove('active');
+    }
+  });
+  
+  starBtn.innerHTML = '<span class="nf nf-md-star_outline"></span>';
+  starBtn.style.display = 'flex';
+}
+
+function hideStarButton() {
+  const starBtn = document.getElementById('starBtn');
+  if (starBtn) {
+    starBtn.style.display = 'none';
   }
 }
 
@@ -369,11 +459,13 @@ function applyTetoMode() {
 
 function applyCustomColor() {
   const body = document.body;
-  if (settings.customColorEnabled && settings.customBg) {
+  if (settings.customColorEnabled) {
     body.classList.add('custom-color');
-    document.documentElement.style.setProperty('--custom-primary', settings.customColor);
-    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(settings.customColor, -20));
-    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(settings.customColor, 20));
+    const color = settings.customColor;
+    document.documentElement.style.setProperty('--custom-primary', color);
+    document.documentElement.style.setProperty('--custom-primary-dark', adjustColorBrightness(color, -20));
+    document.documentElement.style.setProperty('--custom-primary-light', adjustColorBrightness(color, 20));
+    document.documentElement.style.setProperty('--custom-primary-lighter', adjustColorBrightness(color, 40));
   } else {
     body.classList.remove('custom-color');
   }
@@ -424,6 +516,33 @@ function getFaviconUrl(url) {
   }
 }
 
+async function getCachedFavicon(url) {
+  const faviconUrl = getFaviconUrl(url);
+  if (!faviconUrl) return null;
+  
+  const cached = await window.MikuStorage.getCachedFavicon(url);
+  if (cached) return cached;
+  
+  // Cache the favicon
+  try {
+    const response = await fetch(faviconUrl);
+    const blob = await response.blob();
+    const reader = new FileReader();
+    
+    return new Promise((resolve) => {
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        await window.MikuStorage.saveCachedFavicon(url, base64);
+        resolve(base64);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error caching favicon:', error);
+    return faviconUrl;
+  }
+}
+
 function setupEventListeners() {
   document.querySelectorAll('.engine-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -447,7 +566,7 @@ function setupEventListeners() {
   });
 
   document.getElementById('settingsBtn').addEventListener('click', () => {
-    // Use browser.runtime for Firefox Manifest V3
+    // Use browser.runtime for Firefox
     browser.runtime.openOptionsPage();
   });
 
@@ -495,7 +614,7 @@ async function renderShortcuts() {
   const maxSlots = 14;
   
   for (let i = 0; i < shortcuts.length; i++) {
-    const card = createShortcutCard(shortcuts[i], i);
+    const card = await createShortcutCard(shortcuts[i], i);
     grid.appendChild(card);
   }
 
@@ -507,14 +626,14 @@ async function renderShortcuts() {
   applyBlurSettings();
 }
 
-function createShortcutCard(shortcut, index) {
+async function createShortcutCard(shortcut, index) {
   const card = document.createElement('a');
   card.className = 'shortcut-card';
   card.href = shortcut.url;
   
-  const faviconUrl = getFaviconUrl(shortcut.url);
-  const iconHtml = faviconUrl 
-    ? `<img src="${faviconUrl}" class="shortcut-favicon" alt="${escapeHtml(shortcut.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+  const cachedFavicon = await getCachedFavicon(shortcut.url);
+  const iconHtml = cachedFavicon
+    ? `<img src="${cachedFavicon}" class="shortcut-favicon" alt="${escapeHtml(shortcut.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
        <div class="shortcut-icon nf nf-md-link_variant" style="display: none;"></div>`
     : `<div class="shortcut-icon nf nf-md-link_variant"></div>`;
   
