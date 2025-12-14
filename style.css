@@ -4,12 +4,115 @@
   box-sizing: border-box;
 }
 
+:root {
+  --custom-primary: #68c3ff;
+  --custom-primary-dark: #0059ff;
+  --custom-primary-light: #9ee5ff;
+  --custom-primary-lighter: #d4f1ff;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   overflow: hidden;
   width: 100vw;
   height: 100vh;
   position: relative;
+}
+
+/* Star Button */
+.star-btn {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  padding: 1rem;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  color: #ffd700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.star-btn:hover {
+  transform: scale(1.15) rotate(72deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.star-btn.active {
+  background: rgba(255, 215, 0, 0.9);
+  color: white;
+  animation: starPulse 0.5s ease;
+}
+
+.star-btn.active span::before {
+  content: "\f0ae"; /* nf-md-star filled */
+}
+
+@keyframes starPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+/* Custom Color Theme Support */
+body.custom-color .engine-btn:hover {
+  background: rgba(var(--custom-primary-rgb), 0.3);
+}
+
+body.custom-color .engine-btn.active {
+  background: var(--custom-primary-light);
+}
+
+body.custom-color .search-submit {
+  background: var(--custom-primary);
+}
+
+body.custom-color .search-submit:hover {
+  background: var(--custom-primary-dark);
+}
+
+body.custom-color .shortcut-card:hover {
+  background: var(--custom-primary-lighter);
+}
+
+body.custom-color .shortcut-card.add-btn {
+  background: var(--custom-primary-light);
+  border-color: var(--custom-primary);
+}
+
+body.custom-color .shortcut-card.add-btn:hover {
+  background: var(--custom-primary);
+}
+
+body.custom-color .settings-btn:hover {
+  background: var(--custom-primary);
+}
+
+body.custom-color .modal-btn.primary {
+  background: var(--custom-primary);
+}
+
+body.custom-color .modal-btn.primary:hover {
+  background: var(--custom-primary-dark);
+}
+
+body.custom-color .modal-content input:focus {
+  border-color: var(--custom-primary);
+}
+
+body.custom-color .weather-display > span:first-child {
+  color: var(--custom-primary);
+}
+
+body.custom-color .wallpaper-loader > span:first-child {
+  color: var(--custom-primary);
+}
+
+body.custom-color .loader-percentage {
+  color: var(--custom-primary);
 }
 
 /* Weather Display */
@@ -40,10 +143,6 @@ body {
 
 body.teto-mode .weather-display > span:first-child {
   color: #ff6b6b;
-}
-
-body.custom-color .weather-display > span:first-child {
-  color: var(--custom-primary);
 }
 
 /* Teto Mode Color Overrides */
@@ -738,5 +837,10 @@ body.teto-mode .loader-percentage {
 
   .settings-btn {
     bottom: 7rem;
+  }
+  
+  .star-btn {
+    top: 1rem;
+    right: 1rem;
   }
 }
