@@ -78,8 +78,11 @@ function showUpdateAvailable(currentVersion, newVersion) {
   document.querySelector('.container').insertBefore(updateBanner, document.querySelector('header'));
   
   document.getElementById('downloadUpdate').addEventListener('click', () => {
-    window.open(LATEST_RELEASE_URL, '_blank');
-    showUpdateInstructions(newVersion);
+    showToast('Wait till it drops to your browser... Opening addon page!', false);
+    
+    setTimeout(() => {
+      window.open('https://addons.mozilla.org/en-US/firefox/addon/mikutab/', '_blank');
+    }, 3000);
   });
   
   updateBanner.querySelector('.update-close').addEventListener('click', () => {
@@ -88,15 +91,8 @@ function showUpdateAvailable(currentVersion, newVersion) {
 }
 
 async function showUpdateInstructions(newVersion) {
-  try {
-    const updateMdUrl = 'https://raw.githubusercontent.com/MalikHw/MikuTheme/main/UPDATE.md';
-    const response = await fetch(updateMdUrl);
-    const instructions = await response.text();
-    
-    showUpdateModal(instructions, newVersion);
-  } catch (error) {
-    console.error('Failed to load update instructions:', error);
-  }
+  // Firefox users get updates automatically from the addon store
+  // No manual update instructions needed
 }
 
 function showUpdateModal(markdownContent, version) {
@@ -391,5 +387,7 @@ function showToast(message, isError = false) {
   toast.style.color = isError ? 'white' : '#202124';
   toast.classList.add('show');
 
-  setTimeout(() => toast.classList.remove('show'), 3000);
+  // Extended timeout for update message
+  const duration = message.includes('drops to your browser') ? 3500 : 3000;
+  setTimeout(() => toast.classList.remove('show'), duration);
 }
