@@ -13,6 +13,9 @@ how to install:
 - download the zip file of chrome
 - drag the zip to the extensions Options
 
+### Incase u didnt understand:
+![here's the fucking video](clideo_editor_aabe475310f04c74a79ed5ac871a0bf4.gif)
+
 ## This shi got:
 - Automatic updates checker (and tells u how to install)(pls dont manually update when u get this from ms edge store)
 - auto new miku updates
