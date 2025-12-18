@@ -5,9 +5,10 @@
 ![screenshot1](screenshot2.png)
 ![(click the about section 5 times to unlock teto)](screenshot3.png)
 
-how to install:
+how to install(Monetized links so i can afford 5$ for the chrome webstore!!):
 ### MS EDGE: [just go here bub](https://ouo.io/1TWrSk)
 ### FIREFOX: [[HYPERLINK BLOCKED]](https://ouo.io/jb8pQv)
+### Chrome: i need 5$ for the WebStore, but im broke lol
 ### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
 - download the zip file of chrome
