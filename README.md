@@ -6,8 +6,8 @@
 ![(click the about section 5 times to unlock teto)](screenshot3.png)
 
 how to install:
-### MS EDGE: [just go here bub](https://microsoftedge.microsoft.com/addons/detail/mikutab/gjjkbbpbncpclmlffdckbahgibbnhdaa)
-### FIREFOX: [[HYPERLINK BLOCKED]](https://addons.mozilla.org/en-US/android/addon/mikutab/)
+### MS EDGE: [just go here bub](https://link-target.net/1455259/I6gZjPi5mtrH)
+### FIREFOX: [[HYPERLINK BLOCKED]](https://link-target.net/1455259/989wsSmvsm8X)
 ### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
 - download the zip file of chrome
