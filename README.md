@@ -30,3 +30,6 @@ how to install:
               height: auto; 
               border: none;">
 </a>
+
+also btw:
+<a href="http://ouo.io/ref/Ofi5J56F"><img src="http://ouo.io/images/banners/r2.jpg" title="ouo.io - Make short links and earn the biggest money" /></a>
