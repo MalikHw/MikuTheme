@@ -7,7 +7,7 @@
 
 how to install:
 ### MS EDGE: [just go here bub](https://ouo.io/1TWrSk)
-### FIREFOX: [[HYPERLINK BLOCKED]](https://ouo.io/hP1v1Qy)
+### FIREFOX: [[HYPERLINK BLOCKED]](https://ouo.io/jb8pQv)
 ### OTHER CHROMIUM BROWSERS:
 - enable developer options in [here](chrome://extensions)
 - download the zip file of chrome
