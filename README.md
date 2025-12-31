@@ -22,6 +22,7 @@ how to install(Monetized links so i can afford 5$ for the chrome webstore!!):
 - auto new miku updates
 - an easter egg apparently
 - CUSTOM WALLPAPER/COLOR SCHEME
+- Weather infos!
 - idk
 - support me here if u want to:
 <a href="https://throne.com/MalikHw47" target="_blank">
