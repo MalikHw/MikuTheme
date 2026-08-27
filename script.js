@@ -474,7 +474,7 @@ function adjustColorBrightness(hex, percent) {
 
 function applyBlurSettings() {
   const bgLayer = document.querySelector('.background-layer');
-  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .kofi-banner, .weather-display');
+  const blurElements = document.querySelectorAll('.search-engine-selector, .search-bar-wrapper, .shortcut-card, .settings-btn, .donate-banner, .weather-display');
 
   if (settings.blurEnabled) {
     blurElements.forEach(el => el.classList.add('blur'));
@@ -486,7 +486,7 @@ function applyBlurSettings() {
 }
 
 function updateBannerVisibility() {
-  const banner = document.querySelector('.kofi-banner');
+  const banner = document.querySelector('.donate-banner');
   if (banner) {
     banner.style.display = settings.bannerHidden ? 'none' : 'flex';
   }

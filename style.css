@@ -297,7 +297,7 @@ body.teto-mode .loader-percentage {
 .search-bar-wrapper.blur,
 .shortcut-card.blur,
 .settings-btn.blur,
-.kofi-banner.blur,
+.donate-banner.blur,
 .weather-display.blur {
   backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.7);
@@ -647,8 +647,8 @@ body.teto-mode .loader-percentage {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Ko-fi Banner */
-.kofi-banner {
+/* donate Banner */
+.donate-banner {
   position: fixed;
   bottom: 1.5rem;
   left: 50%;
@@ -665,17 +665,17 @@ body.teto-mode .loader-percentage {
   z-index: 100;
 }
 
-.kofi-banner.blur {
+.donate-banner.blur {
   backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.8);
 }
 
-.kofi-banner:hover {
+.donate-banner:hover {
   transform: translateX(-50%) translateY(-4px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
-.kofi-banner>span:first-child {
+.donate-banner>span:first-child {
   font-size: 1.5rem;
   animation: heartbeat 1.5s ease infinite;
 }
@@ -696,13 +696,13 @@ body.teto-mode .loader-percentage {
   }
 }
 
-.kofi-banner>span:nth-child(2) {
+.donate-banner>span:nth-child(2) {
   font-size: 0.95rem;
   color: #3c4043;
   font-weight: 500;
 }
 
-.kofi-btn {
+.donate-btn {
   background: linear-gradient(135deg, #ff5f5f 0%, #ff3838 100%);
   color: white;
   padding: 0.6rem 1.2rem;
@@ -717,7 +717,7 @@ body.teto-mode .loader-percentage {
   box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
 }
 
-.kofi-btn:hover {
+.donate-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(255, 71, 87, 0.5);
   background: linear-gradient(135deg, #ff3838 0%, #ff5f5f 100%);
@@ -845,7 +845,7 @@ body.teto-mode .loader-percentage {
     grid-template-columns: repeat(4, 1fr);
   }
 
-  .kofi-banner {
+  .donate-banner {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
@@ -855,11 +855,11 @@ body.teto-mode .loader-percentage {
     width: calc(100% - 2rem);
   }
 
-  .kofi-banner:hover {
+  .donate-banner:hover {
     transform: translateY(-4px);
   }
 
-  .kofi-banner>span:nth-child(2) {
+  .donate-banner>span:nth-child(2) {
     font-size: 0.85rem;
     text-align: center;
   }
