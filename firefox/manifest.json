@@ -18,7 +18,6 @@
   "permissions": [
     "storage",
     "https://raw.githubusercontent.com/*",
-    "https://duckduckgo.com/*",
     "https://suggestqueries.google.com/*"
   ],
   "browser_action": {
