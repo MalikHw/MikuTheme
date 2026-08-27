@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Miku Theme",
   "description": "A Hatsune Miku themed New Tab page for Firefox!",
-  "version": "0",
+  "version": "3.0",
   "author": "MalikHw47",
   "icons": {
     "16": "icon16.png",
@@ -18,7 +18,8 @@
   "permissions": [
     "storage",
     "https://raw.githubusercontent.com/*",
-    "https://duckduckgo.com/*"
+    "https://duckduckgo.com/*",
+    "https://suggestqueries.google.com/*"
   ],
   "browser_action": {
     "default_popup": "popup.html",
@@ -28,16 +29,14 @@
       "128": "icon128.png"
     }
   },
-  "options_ui": {
-    "page": "settings.html",
-    "open_in_tab": true
-  },
   "browser_specific_settings": {
     "gecko": {
       "id": "miku-theme@malikhw47.com",
       "strict_min_version": "78.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     }
   }
