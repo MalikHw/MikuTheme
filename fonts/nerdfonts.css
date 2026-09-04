@@ -43,6 +43,7 @@
 .nf-md-refresh:before { content: "\f0450"; }
 .nf-md-tab:before { content: "\f04ff"; }
 .nf-md-search_web:before { content: "\f04b2"; }
+.nf-md-star:before { content: "\f04ce"; }
 
 /* Font Awesome Icons (nf-fa-*) */
 .nf-fa-dollar:before { content: "\f155"; }

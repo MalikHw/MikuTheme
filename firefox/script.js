@@ -346,29 +346,10 @@ function showStarButton(imageNum, isTeto) {
   if (settings.customBg) return; // Don't show for custom wallpapers
 
   let starBtn = document.getElementById('starBtn');
-  if (!starBtn) {
-    starBtn = document.createElement('button');
-    starBtn.id = 'starBtn';
-    starBtn.className = 'star-btn';
-    document.body.appendChild(starBtn);
+  if (!starBtn) return;
 
-    starBtn.addEventListener('click', async () => {
-      const favorites = await window.MikuStorage.getFavorites(isTeto);
-      const index = favorites.indexOf(imageNum);
-
-      if (index > -1) {
-        // Remove from favorites
-        favorites.splice(index, 1);
-        starBtn.classList.remove('active');
-      } else {
-        // Add to favorites
-        favorites.push(imageNum);
-        starBtn.classList.add('active');
-      }
-
-      await window.MikuStorage.saveFavorites(favorites, isTeto);
-    });
-  }
+  starBtn.dataset.imageNum = imageNum;
+  starBtn.dataset.isTeto = isTeto;
 
   // Check if this image is a favorite
   window.MikuStorage.getFavorites(isTeto).then(favorites => {
@@ -601,6 +582,27 @@ function setupEventListeners() {
       updateWeatherDisplay(weatherText, tempC);
     });
   }
+
+  const starBtn = document.getElementById('starBtn');
+  if (starBtn) {
+    starBtn.addEventListener('click', async () => {
+      const isTeto = starBtn.dataset.isTeto === 'true';
+      const imageNum = parseInt(starBtn.dataset.imageNum, 10);
+
+      const favorites = await window.MikuStorage.getFavorites(isTeto);
+      const index = favorites.indexOf(imageNum);
+
+      if (index > -1) {
+        favorites.splice(index, 1);
+        starBtn.classList.remove('active');
+      } else {
+        favorites.push(imageNum);
+        starBtn.classList.add('active');
+      }
+
+      await window.MikuStorage.saveFavorites(favorites, isTeto);
+    });
+  }
 }
 
 function updateActiveEngine() {
@@ -673,6 +675,21 @@ function createAddButton() {
   `;
 
   card.addEventListener('click', () => showAddShortcutModal());
+
+  card.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  card.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+    if (url && isValidUrl(url)) {
+      shortcuts.push({ title: 'untitled', url });
+      await saveShortcuts();
+      renderShortcuts();
+    }
+  });
+
   return card;
 }
 
